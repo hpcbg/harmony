@@ -318,7 +318,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 This project has received funding from the European Union's Horizon Europe research and innovation programme under grant agreement No 101135959 (ARISE).
 
 ### Partners
-- **HPC Bulgaria** - Technical implementation
+- **High Performance Creators** - Technical implementation
 - **CMYK Ingredients** - Use case provider
 - **ARISE Consortium** - Framework and standards
 
