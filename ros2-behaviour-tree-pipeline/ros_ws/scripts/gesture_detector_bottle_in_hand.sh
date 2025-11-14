@@ -1,0 +1,1 @@
+ros2 service call /gesture_detector/manipulate_state custom_interfaces/srv/ManipulateState "{manipulated_state_json: '{\"detected_gesture\": \"bottle_in_hand\", \"timeout\": 5}'}"
