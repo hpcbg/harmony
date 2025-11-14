@@ -329,11 +329,17 @@ class PickNode(Node):
         self.tree = py_trees.trees.BehaviourTree(root)
         self.tree.setup(node=self)
         # render the tree
-        py_trees.display.render_dot_tree(
-            root,
-            target_directory='diagrams',
-            # with_blackboard_variables=True
-        )
+        # py_trees.display.render_dot_tree(
+        #     root,
+        #     name='system_skill_pick',
+        #     target_directory='diagrams'
+        # )
+        # py_trees.display.render_dot_tree(
+        #     root,
+        #     name='system_skill_pick_with_bb',
+        #     target_directory='diagrams',
+        #     with_blackboard_variables=True
+        # )
 
         self.blackboard = py_trees.blackboard.Client(name='Global')
         self.blackboard.register_key(
