@@ -1,0 +1,11 @@
+# Default initial positions for UF_ROBOT's ros2_control fake system
+
+initial_positions:
+  drive_joint: 0
+  joint1: 0
+  joint2: 0
+  joint3: 0
+  joint4: 0
+  joint5: 0
+  joint6: 0
+  joint7: 0
