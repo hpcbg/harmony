@@ -1,0 +1,1 @@
+ros2 service call /human_intent_detector/manipulate_state custom_interfaces/srv/ManipulateState "{manipulated_state_json: '{\"detected_intent\": \"rotate_bottle\", \"timeout\": 5}'}"

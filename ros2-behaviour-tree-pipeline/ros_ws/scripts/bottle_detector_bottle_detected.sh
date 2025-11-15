@@ -1,0 +1,1 @@
+ros2 service call /bottle_detector/manipulate_state custom_interfaces/srv/ManipulateState "{manipulated_state_json: '{\"detected_bottle\": {\"found\":true,\"pose\":{\"x\": 2.0, \"y\": 0.0, \"z\": 0.0}}}'}"
