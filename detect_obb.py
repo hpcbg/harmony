@@ -3,6 +3,7 @@ import numpy as np
 from ultralytics import YOLO
 import json
 import os
+import math
 
 import utils.json_config
 
@@ -39,15 +40,26 @@ coord_mode = "GLOBAL"
 H = None
 
 
+def normalize_angle(theta):
+    return (theta + math.pi) % (2 * math.pi) - math.pi
+
+
+def local_to_global_pose(x_l, y_l, theta_l, x0, y0, theta0):
+    x_g = x0 + x_l * math.cos(theta0) - y_l * math.sin(theta0)
+    y_g = y0 + x_l * math.sin(theta0) + y_l * math.cos(theta0)
+
+    theta_g = normalize_angle(theta0 + theta_l)
+
+    return x_g, y_g, theta_g
+
+
 def detect_all_markers(frame):
-    """Returns all ArUco markers."""
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     corners, ids, rejected = detector.detectMarkers(gray)
     return corners, ids
 
 
 def get_plane_markers(corners, ids):
-    """Gets the center of the markers defining the plane"""
     if ids is None:
         return None
 
@@ -121,14 +133,21 @@ def mouse_callback(event, x, y, flags, param):
             return
 
         # Write pick and place command if the robot is available
+        x0, y0 = coords_diff[0], coords_diff[1]
+        theta0 = math.radians(orientation_diff)
+        x_l, y_l = float(selected_obj['coords'][0]), float(
+            selected_obj['coords'][1])
+        theta_l = math.radians(float(selected_obj.get('orientation', 0)))
+        x, y, theta = local_to_global_pose(x_l, y_l, theta_l, x0, y0, theta0)
+        theta = math.degrees(theta)
         data = {
             "pick_pose": {
-                "x": float(selected_obj['coords'][0]) + coords_diff[0],
-                "y": float(selected_obj['coords'][1]) + coords_diff[1],
+                "x": x,
+                "y": y,
                 "z": 0,
                 "roll_degrees": 0,
                 "pitch_degrees": 180,
-                "yaw_degrees": float(selected_obj.get('orientation', 0)) + orientation_diff
+                "yaw_degrees": theta
             },
             "place_pose": {
                 "x": BOTTLE_STAND_POSE['x'],
@@ -136,7 +155,7 @@ def mouse_callback(event, x, y, flags, param):
                 "z": BOTTLE_STAND_POSE['z'],
                 "roll_degrees": 0,
                 "pitch_degrees": 90,
-                "yaw_degrees": float(selected_obj.get('orientation', 0)) + orientation_diff,
+                "yaw_degrees": 0,
             }
         }
 
@@ -237,7 +256,7 @@ def draw_gui_overlay(frame, hover_obj, selected_obj, robot_state):
     btn_h = 35
     bx = x0 + 10
     by = y0 + 240
-    cv2.rectangle(frame, (bx, by), (bx+btn_w, by+btn_h),
+    cv2.rectangle(frame, (bx, by), (bx + btn_w, by + btn_h),
                   (180, 180, 180), 2)
     cv2.putText(frame,
                 f"MODE: {coord_mode}",
@@ -374,12 +393,20 @@ while True:
         coords = b['coords']
         orientation = b['orientation']
         if coord_mode == 'GLOBAL':
-            coords = (coords[0] + coords_diff[0], coords[1] + coords_diff[1])
-            orientation += orientation_diff
-        cv2.putText(frame, f"({coords[0]:.1f}, {coords[1]:.1f})",
+            x0, y0 = coords_diff[0], coords_diff[1]
+            theta0 = math.radians(orientation_diff)
+            x_l, y_l = coords[0], coords[1]
+            theta_l = math.radians(orientation)
+            x, y, theta = local_to_global_pose(
+                x_l, y_l, theta_l, x0, y0, theta0)
+            theta = math.degrees(theta)
+        else:
+            x, y, theta = coords[0], coords[1], orientation
+
+        cv2.putText(frame, f"({x:.1f}, {y:.1f})",
                     (b["center"][0] + 5, b["center"][1] - 5),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        cv2.putText(frame, f"{int(orientation)} deg",
+        cv2.putText(frame, f"{int(theta)} deg",
                     (b["center"][0] + 5, b["center"][1] + 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         cv2.putText(frame, f"Bottle {b['conf']:.2f}",
