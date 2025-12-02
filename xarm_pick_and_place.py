@@ -42,7 +42,7 @@ def write_status(status, pos=None):
 
 def move_to_xyzrpy(x, y, z, roll=180, pitch=0, yaw=0, wait=True, speed=100, mvacc=100, status='OK'):
     """Move to XYZ RPY"""
-    arm.set_position(x, y, z, roll, pitch, y, wait=wait,
+    arm.set_position(x, y, z, roll, pitch, yaw, wait=wait,
                      speed=speed, mvacc=mvacc)
     write_status(status, {"x": x, "y": y, "z": z})
 
