@@ -144,18 +144,18 @@ def mouse_callback(event, x, y, flags, param):
             "pick_pose": {
                 "x": x,
                 "y": y,
-                "z": 0,
+                "z": 170,
                 "roll_degrees": 0,
                 "pitch_degrees": 180,
-                "yaw_degrees": theta
+                "yaw_degrees": theta + 90
             },
             "place_pose": {
                 "x": BOTTLE_STAND_POSE['x'],
                 "y": BOTTLE_STAND_POSE['y'],
                 "z": BOTTLE_STAND_POSE['z'],
-                "roll_degrees": 0,
-                "pitch_degrees": 90,
-                "yaw_degrees": 0,
+                "roll_degrees": 57,
+                "pitch_degrees": -90,
+                "yaw_degrees": 32,
             }
         }
 

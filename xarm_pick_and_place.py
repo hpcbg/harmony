@@ -28,8 +28,7 @@ arm.motion_enable(True)
 arm.set_mode(0)
 arm.set_state(0)
 arm.clean_error()
-arm.reset(wait=True)
-arm.set_gripper_mode(0)
+# arm.set_gripper_mode(0)
 arm.set_gripper_enable(True)
 
 
@@ -43,7 +42,7 @@ def write_status(status, pos=None):
 def move_to_xyzrpy(x, y, z, roll=180, pitch=0, yaw=0, wait=True, speed=100, mvacc=100, status='OK'):
     """Move to XYZ RPY"""
     arm.set_position(x, y, z, roll, pitch, yaw, wait=wait,
-                     speed=speed, mvacc=mvacc)
+                     speed=9*speed, mvacc=5*mvacc)
     write_status(status, {"x": x, "y": y, "z": z})
 
 
@@ -110,15 +109,16 @@ def pick_and_place(pick_and_place):
 
         x, y, z, roll, pitch, yaw = HOME_POS
         print("Move to home:", x, y, z, roll, pitch, yaw)
-        move_to_xyzrpy(x, y, z, roll, pitch, yaw, status='BUSY')
+        # move_to_xyzrpy(x, y, z, roll, pitch, yaw, status='BUSY')
 
-        write_status("OK", {"x": x, "y": y, "z": z})
+        # write_status("OK", {"x": x, "y": y, "z": z})
 
     except Exception as e:
         print("ERROR:", e)
     finally:
         # Return to home position
-        move_to_xyzrpy(*HOME_POS, status='BUSY')
+        # move_to_xyzrpy(*HOME_POS, status='BUSY')
+        arm.set_servo_angle(angle=[0,-48.9,-0.7,28.4,0.6,77.3,0.6], wait=True)
         arm.set_gripper_position(GRIPPER_OPEN_POS, wait=True)
         write_status(
             "OK", {"x": HOME_POS[0], "y": HOME_POS[1], "z": HOME_POS[2]})
@@ -127,7 +127,7 @@ def pick_and_place(pick_and_place):
 move_to_xyzrpy(*HOME_POS, status='BUSY')
 write_status("OK", {"x": HOME_POS[0], "y": HOME_POS[1], "z": HOME_POS[2]})
 arm.set_gripper_position(GRIPPER_OPEN_POS, wait=True)
-
+arm.set_servo_angle(angle=[0,-48.9,-0.7,28.4,0.6,77.3,0.6], wait=True)
 while True:
     if os.path.exists(PICK_FILE):
         try:
