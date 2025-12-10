@@ -230,7 +230,6 @@ export const DashboardProvider = ({ children }) => {
           if (config.widgets) setWidgets(config.widgets);
           if (config.widgetLibrary) setWidgetLibrary(config.widgetLibrary);
           
-          alert('Configuration imported successfully!');
         } catch (error) {
           console.error('Import error:', error);
           alert('Invalid configuration file');
