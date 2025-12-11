@@ -1,55 +1,65 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Edit, Menu } from 'lucide-react';
+import { useState, useEffect, useRef } from "react";
+import { X, Edit, Menu } from "lucide-react";
 
 // Draggable Widget Container
-const DraggableWidget = ({ widget, position, onMove, onRemove, onEdit, isEditMode, children }) => {
+const DraggableWidget = ({
+  widget,
+  position,
+  onMove,
+  onRemove,
+  onEdit,
+  isEditMode,
+  children,
+}) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const ref = useRef(null);
-  
+
   const handleMouseDown = (e) => {
     if (!isEditMode) return;
-    if (e.target.closest('.widget-content')) return;
-    if (e.target.closest('.widget-controls')) return;
+    if (e.target.closest(".widget-content")) return;
+    if (e.target.closest(".widget-controls")) return;
     setIsDragging(true);
     setDragStart({
       x: e.clientX - position.x,
-      y: e.clientY - position.y
+      y: e.clientY - position.y,
     });
   };
-  
+
   useEffect(() => {
     if (!isDragging) return;
-    
+
     const handleMouseMove = (e) => {
       onMove(widget.id, {
         x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y
+        y: e.clientY - dragStart.y,
       });
     };
-    
+
     const handleMouseUp = () => {
       setIsDragging(false);
     };
-    
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isDragging, dragStart, widget.id, onMove]);
-  
+
   return (
     <div
       ref={ref}
-      className={`absolute bg-white rounded-lg shadow-lg ${isEditMode ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
+      className={`absolute bg-white rounded-lg shadow-lg ${
+        isEditMode ? (isDragging ? "cursor-grabbing" : "cursor-grab") : ""
+      }`}
       style={{
         left: position.x,
         top: position.y,
         width: position.width || 300,
-        height: position.height || 200
+        height: position.height || 200,
       }}
       onMouseDown={handleMouseDown}
     >
@@ -74,9 +84,7 @@ const DraggableWidget = ({ widget, position, onMove, onRemove, onEdit, isEditMod
           </div>
         </>
       )}
-      <div className="widget-content w-full h-full p-8">
-        {children}
-      </div>
+      <div className="widget-content w-full h-full p-8">{children}</div>
     </div>
   );
 };

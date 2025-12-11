@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import API from '../services/api';
+import { useState, useEffect } from "react";
+import API from "../services/api";
 
 const useWidgetData = (widgets) => {
   const [widgetData, setWidgetData] = useState({});
@@ -9,18 +9,18 @@ const useWidgetData = (widgets) => {
 
     const fetchWidgetData = async (widget) => {
       // Skip button widgets as they don't fetch data
-      if (widget.type === 'button') return;
+      if (widget.type === "button") return;
 
       try {
         const data = await API.get(widget.endpoint);
-        setWidgetData(prev => ({ ...prev, [widget.id]: data }));
+        setWidgetData((prev) => ({ ...prev, [widget.id]: data }));
       } catch (error) {
         console.error(`Error fetching data for widget ${widget.id}:`, error);
       }
     };
 
     // Set up data fetching for each widget
-    widgets.forEach(widget => {
+    widgets.forEach((widget) => {
       // Initial fetch
       fetchWidgetData(widget);
 

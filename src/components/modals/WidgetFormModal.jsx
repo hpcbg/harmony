@@ -1,21 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
-const WidgetFormModal = ({ 
-  isOpen, 
-  onClose, 
-  onSubmit, 
-  //onSaveToLibrary,
+const WidgetFormModal = ({
+  isOpen,
+  onClose,
+  onSubmit,
   editingWidget = null,
-  //isEditingLibraryWidget = false
 }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    type: 'number',
+    name: "",
+    type: "number",
     updateInterval: 5000,
     maxValues: 20,
-    endpoint: '/api/data/number'
+    endpoint: "/api/data/number",
   });
-  
+
   useEffect(() => {
     if (editingWidget) {
       setFormData({
@@ -23,45 +21,45 @@ const WidgetFormModal = ({
         type: editingWidget.type,
         updateInterval: editingWidget.updateInterval,
         maxValues: editingWidget.maxValues || 20,
-        endpoint: editingWidget.endpoint
+        endpoint: editingWidget.endpoint,
       });
     } else {
       setFormData({
-        name: '',
-        type: 'number',
+        name: "",
+        type: "number",
         updateInterval: 5000,
         maxValues: 20,
-        endpoint: '/api/data/number'
+        endpoint: "/api/data/number",
       });
     }
   }, [editingWidget, isOpen]);
-  
+
   const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
-  
+
   const handleTypeChange = (type) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       type,
-      endpoint: `/api/data/${type}`
+      endpoint: `/api/data/${type}`,
     }));
   };
-  
+
   const handleSubmit = () => {
     if (!formData.name.trim()) return;
     onSubmit(formData);
   };
-    
+
   if (!isOpen) return null;
-  
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
         <h3 className="text-xl font-bold mb-4">
-          {editingWidget ? 'Edit Widget' : 'Create New Widget'}
+          {editingWidget ? "Edit Widget" : "Create New Widget"}
         </h3>
-        
+
         <div className="space-y-4">
           {/* Name */}
           <div>
@@ -69,12 +67,12 @@ const WidgetFormModal = ({
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => handleChange('name', e.target.value)}
+              onChange={(e) => handleChange("name", e.target.value)}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Widget name"
             />
           </div>
-          
+
           {/* Type */}
           <div>
             <label className="block text-sm font-medium mb-1">Type</label>
@@ -90,7 +88,7 @@ const WidgetFormModal = ({
               <option value="button">Button (Action)</option>
             </select>
           </div>
-          
+
           {/* Update Interval */}
           <div>
             <label className="block text-sm font-medium mb-1">
@@ -99,41 +97,49 @@ const WidgetFormModal = ({
             <input
               type="number"
               value={formData.updateInterval}
-              onChange={(e) => handleChange('updateInterval', parseInt(e.target.value))}
+              onChange={(e) =>
+                handleChange("updateInterval", parseInt(e.target.value))
+              }
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               min="1000"
               step="1000"
             />
           </div>
-          
+
           {/* Max Values (only for history type) */}
-          {formData.type === 'history' && (
+          {formData.type === "history" && (
             <div>
-              <label className="block text-sm font-medium mb-1">Max Values</label>
+              <label className="block text-sm font-medium mb-1">
+                Max Values
+              </label>
               <input
                 type="number"
                 value={formData.maxValues}
-                onChange={(e) => handleChange('maxValues', parseInt(e.target.value))}
+                onChange={(e) =>
+                  handleChange("maxValues", parseInt(e.target.value))
+                }
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 min="5"
                 max="100"
               />
             </div>
           )}
-          
+
           {/* API Endpoint */}
           <div>
-            <label className="block text-sm font-medium mb-1">API Endpoint</label>
+            <label className="block text-sm font-medium mb-1">
+              API Endpoint
+            </label>
             <input
               type="text"
               value={formData.endpoint}
-              onChange={(e) => handleChange('endpoint', e.target.value)}
+              onChange={(e) => handleChange("endpoint", e.target.value)}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="/api/data/endpoint"
             />
           </div>
         </div>
-        
+
         {/* Actions */}
         <div className="flex gap-3 mt-6">
           <button
@@ -141,7 +147,7 @@ const WidgetFormModal = ({
             disabled={!formData.name.trim()}
             className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {editingWidget ? 'Update Widget' : 'New Widget'}
+            {editingWidget ? "Update Widget" : "New Widget"}
           </button>
           <button
             onClick={onClose}

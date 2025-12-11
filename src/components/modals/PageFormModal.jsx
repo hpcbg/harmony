@@ -1,46 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
-const PageFormModal = ({ 
-  isOpen, 
-  onClose, 
-  onSubmit, 
-  editingPage = null 
-}) => {
-  const [pageName, setPageName] = useState('');
-  
+const PageFormModal = ({ isOpen, onClose, onSubmit, editingPage = null }) => {
+  const [pageName, setPageName] = useState("");
+
   useEffect(() => {
     if (editingPage) {
       setPageName(editingPage.name);
     } else {
-      setPageName('');
+      setPageName("");
     }
   }, [editingPage, isOpen]);
-  
+
   const handleSubmit = () => {
     if (!pageName.trim()) return;
     onSubmit(pageName);
-    setPageName('');
+    setPageName("");
   };
-  
+
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleSubmit();
     }
   };
-  
+
   if (!isOpen) return null;
-  
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
         <h3 className="text-xl font-bold mb-4">
-          {editingPage ? 'Edit Page' : 'Create New Page'}
+          {editingPage ? "Edit Page" : "Create New Page"}
         </h3>
-        
+
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">
-            Page Name
-          </label>
+          <label className="block text-sm font-medium mb-2">Page Name</label>
           <input
             type="text"
             value={pageName}
@@ -51,7 +44,7 @@ const PageFormModal = ({
             autoFocus
           />
         </div>
-        
+
         <div className="flex gap-3">
           <button
             onClick={handleSubmit}
@@ -60,7 +53,7 @@ const PageFormModal = ({
                      hover:bg-blue-600 disabled:opacity-50 
                      disabled:cursor-not-allowed transition-colors"
           >
-            {editingPage ? 'Update' : 'Create'}
+            {editingPage ? "Update" : "Create"}
           </button>
           <button
             onClick={onClose}

@@ -13,30 +13,33 @@ export const generateId = () => {
  */
 export const validateWidget = (widget) => {
   const errors = [];
-  
-  if (!widget.name || widget.name.trim() === '') {
-    errors.push('Widget name is required');
+
+  if (!widget.name || widget.name.trim() === "") {
+    errors.push("Widget name is required");
   }
-  
+
   if (!widget.type) {
-    errors.push('Widget type is required');
+    errors.push("Widget type is required");
   }
-  
+
   if (widget.updateInterval < 1000) {
-    errors.push('Update interval must be at least 1000ms');
+    errors.push("Update interval must be at least 1000ms");
   }
-  
-  if (widget.type === 'history' && (!widget.maxValues || widget.maxValues < 5)) {
-    errors.push('History widget must have at least 5 max values');
+
+  if (
+    widget.type === "history" &&
+    (!widget.maxValues || widget.maxValues < 5)
+  ) {
+    errors.push("History widget must have at least 5 max values");
   }
-  
-  if (!widget.endpoint || widget.endpoint.trim() === '') {
-    errors.push('API endpoint is required');
+
+  if (!widget.endpoint || widget.endpoint.trim() === "") {
+    errors.push("API endpoint is required");
   }
-  
+
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   };
 };
 
@@ -48,27 +51,27 @@ export const validateWidget = (widget) => {
 export const getWidgetTypeInfo = (type) => {
   const config = {
     number: {
-      label: 'Number',
-      color: 'blue',
-      bgColor: 'bg-blue-50'
+      label: "Number",
+      color: "blue",
+      bgColor: "bg-blue-50",
     },
     state: {
-      label: 'State',
-      color: 'green',
-      bgColor: 'bg-green-50'
+      label: "State",
+      color: "green",
+      bgColor: "bg-green-50",
     },
     history: {
-      label: 'History',
-      color: 'purple',
-      bgColor: 'bg-purple-50'
+      label: "History",
+      color: "purple",
+      bgColor: "bg-purple-50",
     },
     button: {
-      label: 'Button',
-      color: 'orange',
-      bgColor: 'bg-orange-50'
-    }
+      label: "Button",
+      color: "orange",
+      bgColor: "bg-orange-50",
+    },
   };
-  
+
   return config[type] || config.number;
 };
 
@@ -90,9 +93,7 @@ export const formatUpdateInterval = (ms) => {
  * @returns {boolean} True if widget is used
  */
 export const isWidgetUsed = (widgetId, pages) => {
-  return pages.some(page => 
-    page.widgets.some(w => w.id === widgetId)
-  );
+  return pages.some((page) => page.widgets.some((w) => w.id === widgetId));
 };
 
 /**
@@ -103,7 +104,6 @@ export const isWidgetUsed = (widgetId, pages) => {
  */
 export const getWidgetPages = (widgetId, pages) => {
   return pages
-    .filter(page => page.widgets.some(w => w.id === widgetId))
-    .map(page => page.name);
+    .filter((page) => page.widgets.some((w) => w.id === widgetId))
+    .map((page) => page.name);
 };
-
