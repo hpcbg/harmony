@@ -1,0 +1,55 @@
+{
+  "pages": [
+    {
+      "id": "home",
+      "name": "Home",
+      "widgets": [
+        {
+          "id": "17654684344672b4g725px",
+          "x": 50,
+          "y": 50,
+          "width": 300,
+          "height": 200
+        },
+        {
+          "id": "1765468445447nn76aixgt",
+          "x": 426,
+          "y": 54,
+          "width": 300,
+          "height": 200
+        }
+      ]
+    },
+    {
+      "id": "1765468423857ppnicj1cq",
+      "name": "Robot",
+      "widgets": [
+        {
+          "id": "17654684344672b4g725px",
+          "x": 50,
+          "y": 50,
+          "width": 300,
+          "height": 200
+        }
+      ]
+    }
+  ],
+  "widgetLibrary": [
+    {
+      "id": "17654684344672b4g725px",
+      "name": "Sensor",
+      "type": "number",
+      "updateInterval": 5000,
+      "maxValues": 20,
+      "endpoint": "/api/data/number"
+    },
+    {
+      "id": "1765468445447nn76aixgt",
+      "name": "Temperature",
+      "type": "history",
+      "updateInterval": 5000,
+      "maxValues": 20,
+      "endpoint": "/api/data/history"
+    }
+  ]
+}
