@@ -1,26 +1,25 @@
-import React, { useState } from 'react';
-import { DashboardProvider, useDashboard } from './context/DashboardContext';
-import { useWidgetData } from './hooks';
-import DashboardLayout from './components/layout/DashboardLayout';
-import DashboardPage from './components/pages/DashboardPage';
-import SettingsPage from './components/pages/SettingsPage';
-import PageFormModal from './components/modals/PageFormModal';
-import WidgetFormModal from './components/modals/WidgetFormModal';
-import WidgetLibraryModal from './components/modals/WidgetLibraryModal';
+import { useState } from "react";
+import { DashboardProvider, useDashboard } from "./context/DashboardContext";
+import { useWidgetData } from "./hooks";
+import DashboardLayout from "./components/layout/DashboardLayout";
+import DashboardPage from "./components/pages/DashboardPage";
+import SettingsPage from "./components/pages/SettingsPage";
+import PageFormModal from "./components/modals/PageFormModal";
+import WidgetFormModal from "./components/modals/WidgetFormModal";
+import WidgetLibraryModal from "./components/modals/WidgetLibraryModal";
 import {
   NumberWidget,
   StateWidget,
   HistoryWidget,
-  ButtonWidget
-} from './components/widgets';
-import API from './services/api';
+  ButtonWidget,
+} from "./components/widgets";
+import API from "./services/api";
 
 const DashboardContent = () => {
   const {
     currentPage,
     isEditMode,
     pages,
-    widgets,
     widgetLibrary,
     setCurrentPage,
     setIsEditMode,
@@ -35,20 +34,19 @@ const DashboardContent = () => {
     moveWidget,
     addFromLibrary,
     exportConfig,
-    importConfig
+    importConfig,
   } = useDashboard();
 
   // Fetch widget data
-  const widgetData = useWidgetData(widgets);
+  const widgetData = useWidgetData(widgetLibrary);
 
   // Modal states
   const [showPageForm, setShowPageForm] = useState(false);
   const [editingPage, setEditingPage] = useState(null);
-  
+
   const [showWidgetForm, setShowWidgetForm] = useState(false);
   const [editingWidget, setEditingWidget] = useState(null);
-  //const [isEditingLibraryWidget, setIsEditingLibraryWidget] = useState(false);
-  
+
   const [showLibrary, setShowLibrary] = useState(false);
 
   // Page handlers
@@ -75,7 +73,6 @@ const DashboardContent = () => {
   // Widget handlers
   const handleAddWidget = () => {
     setEditingWidget(null);
-    //setIsEditingLibraryWidget(false);
     setShowWidgetForm(true);
   };
 
@@ -86,11 +83,7 @@ const DashboardContent = () => {
 
   const handleWidgetFormSubmit = (widgetData) => {
     if (editingWidget) {
-      if (editingWidget.libraryId) {
-        updateWidget(editingWidget.libraryId, widgetData);
-      } else {
-        updateWidget(editingWidget.id, widgetData);
-      }
+      updateWidget(editingWidget.id, widgetData);
     } else {
       addWidget(widgetData);
     }
@@ -111,20 +104,24 @@ const DashboardContent = () => {
   // Render widget based on type
   const renderWidget = (widget, data) => {
     switch (widget.type) {
-      case 'number':
+      case "number":
         return <NumberWidget widget={widget} data={data} />;
-      case 'state':
+      case "state":
         return <StateWidget widget={widget} data={data} />;
-      case 'history':
+      case "history":
         return <HistoryWidget widget={widget} data={data} />;
-      case 'button':
+      case "button":
         return <ButtonWidget widget={widget} onAction={handleButtonAction} />;
       default:
         return <div>Unknown widget type</div>;
     }
   };
 
-  const currentPageData = pages.find(p => p.id === currentPage);
+  const currentPageData = pages.find((p) => p.id === currentPage);
+
+  // Get widgets that are on the current page
+  const pageWidgetIds = currentPageData?.widgets.map((w) => w.id) || [];
+  const pageWidgets = widgetLibrary.filter((w) => pageWidgetIds.includes(w.id));
 
   return (
     <>
@@ -138,12 +135,11 @@ const DashboardContent = () => {
         onAddWidget={handleAddWidget}
         onShowLibrary={() => setShowLibrary(true)}
       >
-        {currentPage === 'settings' ? (
+        {currentPage === "settings" ? (
           <SettingsPage
             isEditMode={isEditMode}
             onToggleEditMode={() => setIsEditMode(!isEditMode)}
             pages={pages}
-            widgets={widgets}
             widgetLibrary={widgetLibrary}
             onEditPage={handleEditPage}
             onDeletePage={deletePage}
@@ -155,7 +151,7 @@ const DashboardContent = () => {
         ) : (
           <DashboardPage
             pageData={currentPageData}
-            widgets={widgets}
+            widgets={pageWidgets}
             widgetData={widgetData}
             isEditMode={isEditMode}
             onMoveWidget={moveWidget}
