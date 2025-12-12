@@ -7,6 +7,30 @@ const API = {
    */
   async get(endpoint) {
     // Simulate network delay
+    if (endpoint.includes("entities")) {
+      const service = "openiot";
+      const servicePath = "/";
+
+      // Sample endpoints:
+      // http://192.168.1.105:1026/v2/entities/M5Stick:001/attrs/buttonBlue
+
+      const res = await fetch(endpoint, {
+        method: "GET",
+        headers: {
+          "Fiware-Service": service,
+          "Fiware-ServicePath": servicePath,
+          Accept: "application/json",
+        },
+      });
+
+      if (!res.ok) {
+        console.error("FIWARE error:", await res.text());
+        return null;
+      }
+
+      return res.json();
+    }
+
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     // Return mock data based on endpoint
