@@ -28,7 +28,14 @@ const API = {
         return null;
       }
 
-      return res.json();
+      let res1 = await res.json();
+
+      if (res1.value.includes("http")) {
+        return {
+          imageUrl: res1.value,
+        };
+      }
+      return res1;
     } else if (endpoint.includes("camera")) {
       return {
         imageUrl: `${endpoint}?t=${Date.now()}`,
