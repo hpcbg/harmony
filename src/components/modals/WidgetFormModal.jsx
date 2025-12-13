@@ -38,14 +38,6 @@ const WidgetFormModal = ({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleTypeChange = (type) => {
-    setFormData((prev) => ({
-      ...prev,
-      type,
-      endpoint: `/api/data/${type}`,
-    }));
-  };
-
   const handleSubmit = () => {
     if (!formData.name.trim()) return;
     onSubmit(formData);
@@ -78,7 +70,7 @@ const WidgetFormModal = ({
             <label className="block text-sm font-medium mb-1">Type</label>
             <select
               value={formData.type}
-              onChange={(e) => handleTypeChange(e.target.value)}
+              disabled={!!editingWidget}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none 
                        focus:ring-2 focus:ring-blue-500"
             >
