@@ -47,10 +47,9 @@ const API = {
     }
 
     if (endpoint.includes("/history")) {
+      // Return a SINGLE value that will be accumulated over time
       return {
-        values: Array.from({ length: 20 }, () =>
-          Math.floor(Math.random() * 100)
-        ),
+        value: Math.floor(Math.random() * 100),
       };
     }
 
