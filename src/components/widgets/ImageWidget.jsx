@@ -19,14 +19,14 @@ const ImageWidget = ({ widget, data }) => {
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-pink-50 to-purple-50 rounded p-4">
-      <div className="text-sm text-gray-600 mb-2 flex items-center justify-between">
+      <div className="text-sm text-gray-600 mb-2 text-center flex justify-center">
         <span>{widget.name}</span>
         {isLoading && (
           <RefreshCw size={14} className="animate-spin text-gray-400" />
         )}
       </div>
 
-      <div className="flex-1 flex items-center justify-center overflow-hidden rounded bg-white">
+      <div className="flex-1 flex items-center justify-center overflow-hidden rounded ">
         {!imageUrl ? (
           <div className="text-center text-gray-400">
             <ImageIcon size={48} className="mx-auto mb-2 opacity-50" />

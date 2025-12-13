@@ -4,7 +4,9 @@ const HistoryWidget = ({ widget, data }) => {
 
   return (
     <div className="h-full flex flex-col bg-purple-50 rounded p-4">
-      <div className="text-sm text-gray-600 mb-2">{widget.name}</div>
+      <div className="text-sm text-gray-600 mb-2 text-center flex justify-center">
+        {widget.name}
+      </div>
       <div className="flex-1 flex items-end justify-between gap-1">
         {values.map((val, i) => (
           <div
