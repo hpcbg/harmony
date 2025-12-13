@@ -102,6 +102,24 @@ export const DashboardProvider = ({ children }) => {
     [pages, currentPage, setPages, setCurrentPage, openConfirm]
   );
 
+  const resizeWidget = useCallback(
+    (widgetId, size, pageId = currentPage) => {
+      setPages((prev) =>
+        prev.map((page) =>
+          page.id === pageId
+            ? {
+                ...page,
+                widgets: page.widgets.map((w) =>
+                  w.id === widgetId ? { ...w, ...size } : w
+                ),
+              }
+            : page
+        )
+      );
+    },
+    [currentPage, setPages]
+  );
+
   // Widget operations
   const addWidget = useCallback(
     (widgetData, pageId = currentPage) => {
@@ -293,6 +311,7 @@ export const DashboardProvider = ({ children }) => {
     deleteWidget,
     removeWidgetFromPage,
     moveWidget,
+    resizeWidget,
 
     // Library operations
     addFromLibrary,

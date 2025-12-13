@@ -12,6 +12,7 @@ import {
   StateWidget,
   HistoryWidget,
   ButtonWidget,
+  ImageWidget,
 } from "./components/widgets";
 import API from "./services/api";
 
@@ -32,13 +33,22 @@ const DashboardContent = () => {
     deleteWidget,
     removeWidgetFromPage,
     moveWidget,
+    resizeWidget,
     addFromLibrary,
     exportConfig,
     importConfig,
   } = useDashboard();
 
-  // Fetch widget data
-  const widgetData = useWidgetData(widgetLibrary);
+  // Get current page data
+  const currentPageData = pages.find((p) => p.id === currentPage);
+
+  // Get widgets that are on the current page
+  const pageWidgetIds = currentPageData?.widgets.map((w) => w.id) || [];
+  const pageWidgets = widgetLibrary.filter((w) => pageWidgetIds.includes(w.id));
+
+  // Only fetch data for widgets on the active page (not settings page)
+  const shouldFetchData = currentPage !== "settings";
+  const widgetData = useWidgetData(pageWidgets, shouldFetchData);
 
   // Modal states
   const [showPageForm, setShowPageForm] = useState(false);
@@ -112,16 +122,12 @@ const DashboardContent = () => {
         return <HistoryWidget widget={widget} data={data} />;
       case "button":
         return <ButtonWidget widget={widget} onAction={handleButtonAction} />;
+      case "image":
+        return <ImageWidget widget={widget} data={data} />;
       default:
         return <div>Unknown widget type</div>;
     }
   };
-
-  const currentPageData = pages.find((p) => p.id === currentPage);
-
-  // Get widgets that are on the current page
-  const pageWidgetIds = currentPageData?.widgets.map((w) => w.id) || [];
-  const pageWidgets = widgetLibrary.filter((w) => pageWidgetIds.includes(w.id));
 
   return (
     <>
@@ -155,6 +161,7 @@ const DashboardContent = () => {
             widgetData={widgetData}
             isEditMode={isEditMode}
             onMoveWidget={moveWidget}
+            onResizeWidget={resizeWidget}
             onRemoveWidget={removeWidgetFromPage}
             onEditWidget={handleEditWidget}
             renderWidget={renderWidget}

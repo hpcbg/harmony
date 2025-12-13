@@ -6,12 +6,20 @@ const DraggableWidget = ({
   widget,
   position,
   onMove,
+  onResize,
   onRemove,
   onEdit,
   isEditMode,
   children,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeStart, setResizeStart] = useState({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const ref = useRef(null);
 
@@ -19,6 +27,11 @@ const DraggableWidget = ({
     if (!isEditMode) return;
     if (e.target.closest(".widget-content")) return;
     if (e.target.closest(".widget-controls")) return;
+    if (e.target.closest(".resize-handle")) return;
+
+    // Prevent text selection while dragging
+    e.preventDefault();
+
     setIsDragging(true);
     setDragStart({
       x: e.clientX - position.x,
@@ -26,18 +39,40 @@ const DraggableWidget = ({
     });
   };
 
+  const handleResizeMouseDown = (e) => {
+    if (!isEditMode) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    setIsResizing(true);
+    setResizeStart({
+      x: e.clientX,
+      y: e.clientY,
+      width: position.width || 300,
+      height: position.height || 200,
+    });
+  };
+
   useEffect(() => {
-    if (!isDragging) return;
+    if (!isDragging && !isResizing) return;
 
     const handleMouseMove = (e) => {
-      onMove(widget.id, {
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y,
-      });
+      if (isDragging) {
+        onMove(widget.id, {
+          x: e.clientX - dragStart.x,
+          y: e.clientY - dragStart.y,
+        });
+      } else if (isResizing) {
+        onResize(widget.id, {
+          width: resizeStart.width + e.clientX - resizeStart.x,
+          height: resizeStart.height + e.clientY - resizeStart.y,
+        });
+      }
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
+      setIsResizing(false);
     };
 
     document.addEventListener("mousemove", handleMouseMove);
@@ -47,7 +82,15 @@ const DraggableWidget = ({
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, dragStart, widget.id, onMove]);
+  }, [
+    isDragging,
+    isResizing,
+    dragStart,
+    resizeStart,
+    widget.id,
+    onMove,
+    onResize,
+  ]);
 
   return (
     <div
@@ -81,6 +124,27 @@ const DraggableWidget = ({
             >
               <X size={16} />
             </button>
+          </div>
+
+          {/* Resize handle */}
+          <div
+            className="resize-handle absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
+            onMouseDown={handleResizeMouseDown}
+            title="Resize widget"
+          >
+            <svg
+              className="absolute bottom-1 right-1 text-gray-400"
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+            >
+              <path
+                d="M 10 2 L 2 10 M 10 6 L 6 10 M 10 10 L 10 10"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                fill="none"
+              />
+            </svg>
           </div>
         </>
       )}

@@ -29,6 +29,10 @@ const API = {
       }
 
       return res.json();
+    } else if (endpoint.includes("camera")) {
+      return {
+        imageUrl: `${endpoint}?t=${Date.now()}`,
+      };
     }
 
     await new Promise((resolve) => setTimeout(resolve, 300));
@@ -47,6 +51,16 @@ const API = {
         values: Array.from({ length: 20 }, () =>
           Math.floor(Math.random() * 100)
         ),
+      };
+    }
+
+    if (endpoint.includes("/image")) {
+      // Return a random image from unsplash
+      const randomId = Math.floor(Math.random() * 1000);
+      return {
+        imageUrl: `https://picsum.photos/seed/${randomId}/800/600`,
+        // Alternative: Use a placeholder service
+        // imageUrl: `https://via.placeholder.com/800x600/4A90E2/ffffff?text=Image+${randomId}`
       };
     }
 

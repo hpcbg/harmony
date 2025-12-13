@@ -4,6 +4,7 @@ export const WIDGET_TYPES = {
   STATE: "state",
   HISTORY: "history",
   BUTTON: "button",
+  IMAGE: "image",
 };
 
 // Default widget settings
@@ -48,6 +49,12 @@ export const WIDGET_TYPE_CONFIG = {
     description: "Sends PUT requests to trigger actions",
     color: "orange",
     defaultEndpoint: "/api/action",
+  },
+  [WIDGET_TYPES.IMAGE]: {
+    label: "Image",
+    description: "Visualizes image",
+    color: "red",
+    defaultEndpoint: "/api/image",
   },
 };
 

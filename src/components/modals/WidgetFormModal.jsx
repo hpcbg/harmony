@@ -86,6 +86,7 @@ const WidgetFormModal = ({
               <option value="state">State (Boolean)</option>
               <option value="history">History (Graph)</option>
               <option value="button">Button (Action)</option>
+              <option value="image">Image</option>
             </select>
           </div>
 

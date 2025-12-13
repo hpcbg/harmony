@@ -6,6 +6,7 @@ const DashboardPage = ({
   widgetData,
   isEditMode,
   onMoveWidget,
+  onResizeWidget,
   onRemoveWidget,
   onEditWidget,
   renderWidget,
@@ -22,6 +23,7 @@ const DashboardPage = ({
             widget={widget}
             position={widgetPos}
             onMove={onMoveWidget}
+            onResize={onResizeWidget}
             onRemove={onRemoveWidget}
             onEdit={onEditWidget}
             isEditMode={isEditMode}
