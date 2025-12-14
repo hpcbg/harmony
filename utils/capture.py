@@ -2,10 +2,10 @@ import cv2
 import os
 import uuid
 
-import utils.json_config
+import json_config
 
 
-CONFIG = utils.json_config.load("config/detect_obb.json")
+CONFIG = json_config.load("../config/detect_obb.json")
 
 RTSP_URL = CONFIG['RTSP_URL']
 OUTPUT_DIR = "captured"
