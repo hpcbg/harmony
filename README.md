@@ -24,6 +24,16 @@ Afer the dataset is generated you can train the model with `train.py`.
 
 You need to configure the ArUco tag numbers, locations and the pick and place locations in the file `config/detect_obb.json`. You can use the `config/detect_obb.json.tpl` file for the first config file creation since the config file is not tracked by the repo.
 
+## REST API App for Bottle Detection
+
+This repository provides a REST API App for execution of bottle detection and pick and place coordinates generation.
+
+This is the current and maintained approach. In order to start the app you should run the uvicorn server by `uvicorn main:app --host 0.0.0.0 --port 22001`. This will start the app at port 22001.
+
+After starting the app you can access the API documentation at the following URL: http://localhost:22001/docs
+
+The documentation will provide you with all the information about the API and the Swager UI will allow you test and experiment with the different queries.
+
 ## Stand-alone OpenCV App
 
 This repository provides a helper stand-alone OpenCV app which allows you to se the result of the detection algorithm and to send pick and place command to a helper script for control of the xArm7 robot. It was developed for initial testing and validation purposes and is not maintained since 14.12.2025.
