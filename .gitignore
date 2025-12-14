@@ -2,6 +2,8 @@
 yolov8n-obb.pt
 captured/*
 !captured/.gitkeep
+utils/captured/*
+!utils/captured/.gitkeep
 datasets/*
 !datasets/.gitkeep
 models/*
