@@ -8,38 +8,31 @@ The repository contains the code needed for dataset generation and model trainin
 
 ## Requirements
 
-The code is tested on Python 3.12. The following packages are required:
-
-- ultralytics
-- opencv-contrib-python
-- jupyter
-- xarm-python-sdk
+The code is tested on Python 3.12. The following packages `requirements.txt` are required.
 
 ## Dataset Generation
 
-The script `capture.py` will allow you to easily capture multiple images which will then be used for the dataset.
+The script in `utils/capture.py` will allow you to easily capture multiple images which will then be used for the dataset.
 
 After you capture the images you need to label them by using a tool like Roboflow, which supports the YOLO OBB format (Object Detection, OBB/Rotation). You need to label two classes `bottle` and `cap` which correspond to each bottle and each bottle cap position which will be later used for detecting the bottle orientation.
 
 You need to configure the URL of the RTSP Stream in the file `config/detect_obb.json`. You can use the `config/detect_obb.json.tpl` file for the first config file creation since the config file is not tracked by the repo.
 
-## Model Training
+## Model Training and Object Detection
 
-Afer the dataset is generated you can train the model with `train_obb.py`.
-
-## Object Detection
-
-For the object detection you need to use the `detect_obb.py` script.
+Afer the dataset is generated you can train the model with `train.py`.
 
 You need to configure the ArUco tag numbers, locations and the pick and place locations in the file `config/detect_obb.json`. You can use the `config/detect_obb.json.tpl` file for the first config file creation since the config file is not tracked by the repo.
 
-## Robotic Pick and Place
+## Stand-alone OpenCV App
 
-For the execution of pick and place you need to run the `xarm_pick_and_place.py` together with `detect_obb.py`. When you click on the bottle, the pick and place command will be send to the robot.
+This repository provides a helper stand-alone OpenCV app which allows you to se the result of the detection algorithm and to send pick and place command to a helper script for control of the xArm7 robot. It was developed for initial testing and validation purposes and is not maintained since 14.12.2025.
+
+For the execution you need to start from the `utils` folder the `xarm_pick_and_place.py` together with `detect_obb.py`. When you click on the bottle, the pick and place command will be send to the robot.
 
 In the `config/xarm_pick_and_place.json` you need to set the IP address of the robot and whether to run the script in XArmAPI emulation mode. You can use the `config/xarm_pick_and_place.json.tpl` file for the first config file creation since the config file is not tracked by the repo.
 
-## Utilities
+## Other Utilities
 
 There are several helper scripts in the `utils` folder:
 
