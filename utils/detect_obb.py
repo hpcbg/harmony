@@ -5,16 +5,16 @@ import json
 import os
 import math
 
-import utils.json_config
+import json_config
 
-CONFIG = utils.json_config.load("config/detect_obb.json")
+CONFIG = json_config.load("../config/detect_obb.json")
 
 scale_factor = CONFIG['WINDOW_SCALE_FACTOR']
 coords_diff = (CONFIG['WORKAREA_POSE']['x'], CONFIG['WORKAREA_POSE']['y'])
 orientation_diff = CONFIG['WORKAREA_POSE']['orientation_degrees']
 
 RTSP_URL = CONFIG['RTSP_URL']
-MODEL_PATH = CONFIG['MODEL_PATH']
+MODEL_PATH = f"../{CONFIG['MODEL_PATH']}"
 
 model = YOLO(MODEL_PATH)
 cap = cv2.VideoCapture(RTSP_URL)
@@ -23,7 +23,7 @@ dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_ARUCO_ORIGINAL)
 parameters = cv2.aruco.DetectorParameters()
 detector = cv2.aruco.ArucoDetector(dictionary, parameters)
 
-# ArUco markers and correspondig points for plane definition
+# ArUco markers and corresponding points for plane definition
 CORNER_MARKERS = CONFIG['CORNER_MARKERS']
 PLANE_POINTS = np.array(CONFIG['CORNER_COORDINATES'], dtype=np.float32)
 
