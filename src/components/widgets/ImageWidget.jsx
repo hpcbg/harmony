@@ -18,8 +18,8 @@ const ImageWidget = ({ widget, data }) => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-pink-50 to-purple-50 rounded p-4">
-      <div className="text-sm text-gray-600 mb-2 text-center flex justify-center">
+    <div className="h-full flex flex-col bg-gradient-to-br from-pink-50 to-red-50 rounded p-4">
+      <div className="text-large text-gray-600 mb-2 text-center flex justify-center">
         <span>{widget.name}</span>
         {isLoading && (
           <RefreshCw size={14} className="animate-spin text-gray-400" />
