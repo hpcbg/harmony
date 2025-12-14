@@ -28,7 +28,11 @@ You need to configure the ArUco tag numbers, locations and the pick and place lo
 
 This repository provides a REST API App for execution of bottle detection and pick and place coordinates generation.
 
-This is the current and maintained approach. In order to start the app you should run the uvicorn server by `uvicorn main:app --host 0.0.0.0 --port 22001`. This will start the app at port 22001.
+This is the current and maintained approach. In order to start the app you should run the uvicorn server by execution of the following command:
+
+`uvicorn main:app --host 0.0.0.0 --port 22001`.
+
+This will start the app at port `22001`.
 
 After starting the app you can access the API documentation at the following URL: http://localhost:22001/docs
 
