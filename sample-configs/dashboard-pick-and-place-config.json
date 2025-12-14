@@ -163,7 +163,7 @@
       "type": "historyBarChart",
       "updateInterval": 1000,
       "maxValues": 20,
-      "endpoint": "/api/data/historyBarChart"
+      "endpoint": "http://localhost:1026/v2/entities/M5Stick:001/attrs/angle"
     }
   ]
 }
