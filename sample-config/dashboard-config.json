@@ -46,10 +46,10 @@
     {
       "id": "1765468445447nn76aixgt",
       "name": "Temperature",
-      "type": "history",
+      "type": "historyLineChart",
       "updateInterval": 5000,
       "maxValues": 20,
-      "endpoint": "/api/data/history"
+      "endpoint": "/api/data/historyLineChart"
     }
   ]
 }
