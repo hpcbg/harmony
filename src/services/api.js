@@ -30,7 +30,7 @@ const API = {
 
       let res1 = await res.json();
 
-      if (res1.value.includes("http")) {
+      if (typeof res1.value === "string" && res1.value.includes("http")) {
         return {
           imageUrl: res1.value,
         };
@@ -53,7 +53,10 @@ const API = {
       return { value: Math.random() > 0.5 };
     }
 
-    if (endpoint.includes("/history")) {
+    if (
+      endpoint.includes("/historyLineChart") ||
+      endpoint.includes("/historyBarChart")
+    ) {
       // Return a SINGLE value that will be accumulated over time
       return {
         value: Math.floor(Math.random() * 100),

@@ -1,4 +1,4 @@
-const HistoryWidget = ({ widget, data }) => {
+const HistoryWidgetBarChart = ({ widget, data }) => {
   const values = data?.values || [];
   const max = Math.max(...values, 1);
   const min = Math.min(...values, 0);
@@ -13,7 +13,7 @@ const HistoryWidget = ({ widget, data }) => {
 
   return (
     <div className="h-full flex flex-col bg-purple-50 rounded p-4">
-      <div className="text-sm text-gray-600 mb-2 text-center flex justify-center">
+      <div className="text-large text-gray-600 mb-2 text-center flex justify-center">
         {widget.name}
       </div>
       <div className="flex-1 flex gap-2">
@@ -87,4 +87,4 @@ const HistoryWidget = ({ widget, data }) => {
   );
 };
 
-export default HistoryWidget;
+export default HistoryWidgetBarChart;

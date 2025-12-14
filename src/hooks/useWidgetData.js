@@ -20,7 +20,10 @@ const useWidgetData = (widgets, isActive = true) => {
         const data = await API.get(widget.endpoint);
 
         // Special handling for history widgets
-        if (widget.type === "history") {
+        if (
+          widget.type === "historyLineChart" ||
+          widget.type === "historyBarChart"
+        ) {
           // Initialize history array if it doesn't exist
           if (!historyDataRef.current[widget.id]) {
             historyDataRef.current[widget.id] = [];

@@ -10,7 +10,8 @@ import WidgetLibraryModal from "./components/modals/WidgetLibraryModal";
 import {
   NumberWidget,
   StateWidget,
-  HistoryWidget,
+  HistoryWidgetLineChart,
+  HistoryWidgetBarChart,
   ButtonWidget,
   ImageWidget,
 } from "./components/widgets";
@@ -118,8 +119,10 @@ const DashboardContent = () => {
         return <NumberWidget widget={widget} data={data} />;
       case "state":
         return <StateWidget widget={widget} data={data} />;
-      case "history":
-        return <HistoryWidget widget={widget} data={data} />;
+      case "historyLineChart":
+        return <HistoryWidgetLineChart widget={widget} data={data} />;
+      case "historyBarChart":
+        return <HistoryWidgetBarChart widget={widget} data={data} />;
       case "button":
         return <ButtonWidget widget={widget} onAction={handleButtonAction} />;
       case "image":

@@ -133,9 +133,9 @@ const SettingsPage = ({
           <h3 className="text-lg font-semibold mb-3">Widget Types Available</h3>
           <div className="space-y-3">
             <div className="p-3 bg-blue-50 rounded">
-              <div className="font-medium text-blue-800">Number</div>
+              <div className="font-medium text-blue-800">Value</div>
               <div className="text-sm text-gray-600">
-                Displays a numeric value from the API
+                Displays a value from the API
               </div>
             </div>
             <div className="p-3 bg-green-50 rounded">
@@ -145,7 +145,17 @@ const SettingsPage = ({
               </div>
             </div>
             <div className="p-3 bg-purple-50 rounded">
-              <div className="font-medium text-purple-800">History (Graph)</div>
+              <div className="font-medium text-purple-800">
+                History (Line chart)
+              </div>
+              <div className="text-sm text-gray-600">
+                Visualizes historical data as line chart
+              </div>
+            </div>
+            <div className="p-3 bg-purple-50 rounded">
+              <div className="font-medium text-purple-800">
+                History (Bar chart)
+              </div>
               <div className="text-sm text-gray-600">
                 Visualizes historical data as a bar chart
               </div>
@@ -154,6 +164,12 @@ const SettingsPage = ({
               <div className="font-medium text-orange-800">Button (Action)</div>
               <div className="text-sm text-gray-600">
                 Sends PUT requests to trigger actions
+              </div>
+            </div>
+            <div className="p-3 bg-red-50 rounded">
+              <div className="font-medium text-red-800">Image</div>
+              <div className="text-sm text-gray-600">
+                Visualizes image from the API
               </div>
             </div>
           </div>

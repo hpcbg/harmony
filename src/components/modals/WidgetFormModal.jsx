@@ -85,7 +85,8 @@ const WidgetFormModal = ({
             >
               <option value="number">Value</option>
               <option value="state">State (Boolean)</option>
-              <option value="history">History (Graph)</option>
+              <option value="historyLineChart">History (Line chart)</option>
+              <option value="historyBarChart">History (Bar chart)</option>
               <option value="button">Button (Action)</option>
               <option value="image">Image</option>
             </select>
@@ -109,7 +110,8 @@ const WidgetFormModal = ({
           </div>
 
           {/* Max Values (only for history type) */}
-          {formData.type === "history" && (
+          {(formData.type === "historyLineChart" ||
+            formData.type === "historyBarChart") && (
             <div>
               <label className="block text-sm font-medium mb-1">
                 Max Values

@@ -27,7 +27,7 @@ export const validateWidget = (widget) => {
   }
 
   if (
-    widget.type === "history" &&
+    (widget.type === "historyLineChart" || widget.type === "historyBarChart") &&
     (!widget.maxValues || widget.maxValues < 5)
   ) {
     errors.push("History widget must have at least 5 max values");
@@ -60,7 +60,12 @@ export const getWidgetTypeInfo = (type) => {
       color: "green",
       bgColor: "bg-green-50",
     },
-    history: {
+    historyLineChart: {
+      label: "History",
+      color: "purple",
+      bgColor: "bg-purple-50",
+    },
+    historyBarChart: {
       label: "History",
       color: "purple",
       bgColor: "bg-purple-50",
@@ -69,6 +74,11 @@ export const getWidgetTypeInfo = (type) => {
       label: "Button",
       color: "orange",
       bgColor: "bg-orange-50",
+    },
+    image: {
+      label: "Image",
+      color: "red",
+      bgColor: "bg-red-50",
     },
   };
 

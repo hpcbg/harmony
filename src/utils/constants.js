@@ -2,7 +2,8 @@
 export const WIDGET_TYPES = {
   NUMBER: "number",
   STATE: "state",
-  HISTORY: "history",
+  HISTORYLINECHART: "historyLineChart",
+  HISTORYBARCHART: "historyBarChart",
   BUTTON: "button",
   IMAGE: "image",
 };
@@ -38,11 +39,17 @@ export const WIDGET_TYPE_CONFIG = {
     color: "green",
     defaultEndpoint: "/api/data/state",
   },
-  [WIDGET_TYPES.HISTORY]: {
-    label: "History (Graph)",
+  [WIDGET_TYPES.HISTORYLINECHART]: {
+    label: "History (Line chart)",
+    description: "Visualizes historical data as a line chart",
+    color: "purple",
+    defaultEndpoint: "/api/data/historyLineChart",
+  },
+  [WIDGET_TYPES.HISTORYBARCHART]: {
+    label: "History (Bar chart)",
     description: "Visualizes historical data as a bar chart",
     color: "purple",
-    defaultEndpoint: "/api/data/history",
+    defaultEndpoint: "/api/data/historyBarChart",
   },
   [WIDGET_TYPES.BUTTON]: {
     label: "Button (Action)",
@@ -70,8 +77,10 @@ export const STORAGE_KEYS = {
 export const APP_CONFIG = {
   MIN_UPDATE_INTERVAL: 1000,
   MAX_UPDATE_INTERVAL: 60000,
-  MIN_HISTORY_VALUES: 5,
-  MAX_HISTORY_VALUES: 100,
+  MIN_HISTORYLINECHART_VALUES: 5,
+  MAX_HISTORYLINECHART_VALUES: 100,
+  MIN_HISTORYBARCHART_VALUES: 5,
+  MAX_HISTORYBARCHART_VALUES: 100,
   MIN_WIDGET_WIDTH: 200,
   MIN_WIDGET_HEIGHT: 150,
 };
