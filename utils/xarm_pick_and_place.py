@@ -2,12 +2,12 @@ import time
 import json
 import os
 
-import utils.json_config
+import json_config
 
-CONFIG = utils.json_config.load("config/xarm_pick_and_place.json")
+CONFIG = json_config.load("../config/xarm_pick_and_place.json")
 
 if CONFIG['EMULATE_ROBOT']:
-    from utils.xarm_emulator import XArmAPI
+    from xarm_emulator import XArmAPI
 else:
     from xarm.wrapper import XArmAPI
 
