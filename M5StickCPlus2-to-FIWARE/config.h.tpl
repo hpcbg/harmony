@@ -7,7 +7,7 @@ const char* ssid = "<SSID>";
 const char* password = "<password>";
 
 // Fiware settings
-const char* fiware_server = "http://192.168.1.105:1026";
+const char* fiware_server = "http://localhost:1026";
 const char* fiware_service = "openiot";
 const char* fiware_servicepath = "/";
 const char* device_id = "M5Stick:001";
