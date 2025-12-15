@@ -13,7 +13,7 @@ from custom_interfaces.action import PickAndPlace
 class XArmROS(Node):
 
     def __init__(self):
-        super().__init__('xarm_ros_bridge')
+        super().__init__('xarm_pick_and_place')
 
         pkg = get_package_share_directory('xarm_pick_and_place')
         default_config_path = os.path.join(

@@ -178,7 +178,7 @@ class RunBottleDetection(py_trees.behaviour.Behaviour):
     def setup(self, **kwargs):
         self.node = kwargs['node']
         self.action_client = ActionClient(
-            self.node, DetectBottle, '/bottle_detector/detect_bottle')
+            self.node, DetectBottle, '/bottle_detector_bridge/detect_bottle')
 
     def update(self):
         self.blackboard.stage = Stages.DETECT_EXECUTE

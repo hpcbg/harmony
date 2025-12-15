@@ -49,7 +49,7 @@ class BottleDetectorBridge(Node):
         self._action_server = ActionServer(
             self,
             DetectBottle,
-            "/bottle_detector/detect_bottle",
+            "/bottle_detector_bridge/detect_bottle",
             self.execute_callback
         )
 
