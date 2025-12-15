@@ -1,4 +1,4 @@
-# Arduino Firmware for connection of M5StickCPlus2 to FIWARE
+# Arduino firmware for connection of M5StickCPlus2 to FIWARE
 
 This repository contains Arduino firmware for the M5StickCPlus2 which will broadcast information from M5 Dual Button and M5 Angle Sensor PORT.B.I/O which are connected to ports 0 and 5 of the Pb.HUB. The hub is connected to the GROVE by I2C at address 0x61.
 
