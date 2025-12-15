@@ -8,6 +8,7 @@ datasets/*
 !datasets/.gitkeep
 models/*
 !models/.gitkeep
+!models/best.pt
 runs
 config/detect_obb.json
 xarm_pick_and_place.json
