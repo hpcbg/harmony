@@ -1,0 +1,86 @@
+// Widget types
+export const WIDGET_TYPES = {
+  NUMBER: "number",
+  STATE: "state",
+  HISTORYLINECHART: "historyLineChart",
+  HISTORYBARCHART: "historyBarChart",
+  BUTTON: "button",
+  IMAGE: "image",
+};
+
+// Default widget settings
+export const DEFAULT_WIDGET_CONFIG = {
+  name: "",
+  type: WIDGET_TYPES.NUMBER,
+  updateInterval: 5000,
+  maxValues: 20,
+  endpoint: "/api/data/number",
+};
+
+// Default widget position
+export const DEFAULT_WIDGET_POSITION = {
+  x: 50,
+  y: 50,
+  width: 300,
+  height: 200,
+};
+
+// Widget type configurations
+export const WIDGET_TYPE_CONFIG = {
+  [WIDGET_TYPES.NUMBER]: {
+    label: "Number",
+    description: "Displays a numeric value from the API",
+    color: "blue",
+    defaultEndpoint: "/api/data/number",
+  },
+  [WIDGET_TYPES.STATE]: {
+    label: "State (Boolean)",
+    description: "Shows active/inactive status with visual indicator",
+    color: "green",
+    defaultEndpoint: "/api/data/state",
+  },
+  [WIDGET_TYPES.HISTORYLINECHART]: {
+    label: "History (Line chart)",
+    description: "Visualizes historical data as a line chart",
+    color: "purple",
+    defaultEndpoint: "/api/data/historyLineChart",
+  },
+  [WIDGET_TYPES.HISTORYBARCHART]: {
+    label: "History (Bar chart)",
+    description: "Visualizes historical data as a bar chart",
+    color: "purple",
+    defaultEndpoint: "/api/data/historyBarChart",
+  },
+  [WIDGET_TYPES.BUTTON]: {
+    label: "Button (Action)",
+    description: "Sends PUT requests to trigger actions",
+    color: "orange",
+    defaultEndpoint: "/api/action",
+  },
+  [WIDGET_TYPES.IMAGE]: {
+    label: "Image",
+    description: "Visualizes image",
+    color: "red",
+    defaultEndpoint: "/api/image",
+  },
+};
+
+// LocalStorage keys
+export const STORAGE_KEYS = {
+  PAGES: "dashboard-pages",
+  WIDGET_LIBRARY: "dashboard-widget-library",
+  CURRENT_PAGE: "dashboard-current-page",
+  EDIT_MODE: "dashboard-edit-mode",
+};
+
+// App settings
+export const APP_CONFIG = {
+  MIN_UPDATE_INTERVAL: 1000,
+  MAX_UPDATE_INTERVAL: 60000,
+  MIN_HISTORYLINECHART_VALUES: 5,
+  MAX_HISTORYLINECHART_VALUES: 100,
+  MIN_HISTORYBARCHART_VALUES: 5,
+  MAX_HISTORYBARCHART_VALUES: 100,
+  MIN_WIDGET_WIDTH: 200,
+  MIN_WIDGET_HEIGHT: 150,
+};

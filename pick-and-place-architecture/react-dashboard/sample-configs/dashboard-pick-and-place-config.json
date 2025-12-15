@@ -1,0 +1,169 @@
+{
+  "pages": [
+    {
+      "id": "home",
+      "name": "Home",
+      "widgets": [
+        {
+          "id": "1765720966379mt4rqi4bd",
+          "x": 10,
+          "y": 5,
+          "width": 451,
+          "height": 397
+        },
+        {
+          "id": "1765721180696lqx28q0d2",
+          "x": 474,
+          "y": 6,
+          "width": 410,
+          "height": 393
+        },
+        {
+          "id": "17657213656357pr1iverr",
+          "x": 12,
+          "y": 410,
+          "width": 408,
+          "height": 171
+        },
+        {
+          "id": "1765722016356gf4s8tmtu",
+          "x": 429,
+          "y": 411,
+          "width": 244,
+          "height": 170
+        },
+        {
+          "id": "1765722199485iakjjdpp6",
+          "x": 898,
+          "y": 6,
+          "width": 196,
+          "height": 192
+        },
+        {
+          "id": "1765722474194b9y8roddw",
+          "x": 899,
+          "y": 208,
+          "width": 200,
+          "height": 189
+        },
+        {
+          "id": "1765723107631sebsz5oz3",
+          "x": 686,
+          "y": 410,
+          "width": 413,
+          "height": 172
+        }
+      ]
+    },
+    {
+      "id": "17657238409066vygtatqe",
+      "name": "Demo Charts",
+      "widgets": [
+        {
+          "id": "1765723706735xj6mvbf67",
+          "x": 33,
+          "y": 14,
+          "width": 422,
+          "height": 312
+        },
+        {
+          "id": "176572379180774nazjw0k",
+          "x": 34,
+          "y": 338,
+          "width": 421,
+          "height": 293
+        }
+      ]
+    }
+  ],
+  "widgetLibrary": [
+    {
+      "id": "1765720966379mt4rqi4bd",
+      "name": "Camera Live Image",
+      "type": "image",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:22001/api/v1/camera/snapshot"
+    },
+    {
+      "id": "1765721180696lqx28q0d2",
+      "name": "Last Bottle Detection",
+      "type": "image",
+      "updateInterval": 3000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/last_processed_image/attrs/url"
+    },
+    {
+      "id": "17657213656357pr1iverr",
+      "name": "System Skill Pick and Place Status",
+      "type": "number",
+      "updateInterval": 5000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/system_skill_pick_and_place/attrs/status"
+    },
+    {
+      "id": "1765722016356gf4s8tmtu",
+      "name": "Robot Status",
+      "type": "number",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/xarm_robot/attrs/status"
+    },
+    {
+      "id": "1765722110573ll63kyipd",
+      "name": "Start Button",
+      "type": "number",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/start_button/attrs/value"
+    },
+    {
+      "id": "1765722199485iakjjdpp6",
+      "name": "Start Button",
+      "type": "state",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/M5Stick:001/attrs/buttonBlue"
+    },
+    {
+      "id": "1765722452781cmt059ajy",
+      "name": "Abort Button",
+      "type": "number",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/M5Stick:001/attrs/buttonRed"
+    },
+    {
+      "id": "1765722474194b9y8roddw",
+      "name": "Abort Button",
+      "type": "state",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/M5Stick:001/attrs/buttonRed"
+    },
+    {
+      "id": "1765723107631sebsz5oz3",
+      "name": "Last Found Bottle",
+      "type": "number",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/last_found_bottle/attrs/info"
+    },
+    {
+      "id": "1765723706735xj6mvbf67",
+      "name": "Demo Line Chart",
+      "type": "historyLineChart",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/M5Stick:001/attrs/angle"
+    },
+    {
+      "id": "176572379180774nazjw0k",
+      "name": "Demo Bar Chart",
+      "type": "historyBarChart",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/M5Stick:001/attrs/angle"
+    }
+  ]
+}
