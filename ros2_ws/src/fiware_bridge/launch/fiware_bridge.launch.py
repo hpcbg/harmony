@@ -41,8 +41,8 @@ def generate_launch_description():
 
     configurable_bridge_node = Node(
         package='fiware_bridge',
-        executable='configurable_bridge',
-        name='configurable_bridge_node',
+        executable='configurable_fiware_bridge',
+        name='configurable_fiware_bridge',
         output='screen',
         parameters=[{
             'config_file': LaunchConfiguration('config_file'),

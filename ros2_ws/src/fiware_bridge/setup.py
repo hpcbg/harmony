@@ -26,7 +26,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'configurable_bridge = fiware_bridge.configurable_fiware_bridge:main',
+            'configurable_fiware_bridge = fiware_bridge.configurable_fiware_bridge:main',
         ],
     },
 )
