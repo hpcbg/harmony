@@ -92,4 +92,4 @@ Now, you can send the bottle pick and place request by pressing the blue button 
 
 On the following URL you can find a video demonstration of the work of the system: [https://youtu.be/GPN-yw6dJqc](https://youtu.be/GPN-yw6dJqc).
 
-[![xArm7 Pick and Place of Bottles](https://img.youtube.com/vi/GPN-yw6dJqc/0.jpg)](https://www.youtube.com/watch?v=GPN-yw6dJqc)
+[![xArm7 Pick and Place of Bottles](https://img.youtube.com/vi/GPN-yw6dJqc/3.jpg)](https://www.youtube.com/watch?v=GPN-yw6dJqc)
