@@ -13,6 +13,8 @@ cd ros2_ws
 ros2 launch ./launch/complete.launch.py
 ```
 
+You can also use the provided run script in [./run.sh](./run.sh).
+
 ## Overview of the packages
 
 The packages are as follows:
