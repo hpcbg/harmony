@@ -58,7 +58,7 @@ The sample Arduino firmware and more details can be found in the folder [arduino
 
 Before the first start of the system you need to create all of the configuration files and the positions of all of the object within the workspace of the robot. Also, you might need to train the AI model for your specific type of bottles. More details can be found in the README.md file of the specific system component.
 
-You will need to install the required Python packages and to build all of the ROS 2 packages.
+You will need to install the required Python packages and to build all of the ROS 2 packages. Please, make sure that PyTorch is installed and working correctly. You can check it with the following Jupyter Notebook: [./ai-bottle-detector/utils/bottle_detector.ipynb](./ai-bottle-detector/utils/bottle_detector.ipynb).
 
 After the system is configured, you can start it as follows.
 
