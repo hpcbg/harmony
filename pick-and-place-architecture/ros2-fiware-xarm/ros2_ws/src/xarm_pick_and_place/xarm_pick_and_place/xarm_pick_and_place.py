@@ -183,7 +183,7 @@ class XArmROS(Node):
         self.send_feedback(goal_handle, "Move to home.")
 
         self.arm.set_servo_angle(
-            angle=[0, -48.9, -0.7, 28.4, 0.6, 77.3, 0.6], wait=True)
+            angle=self.CONFIG['HOME_POS_ANGLES'], wait=True)
         self.arm.set_gripper_position(
             self.CONFIG['GRIPPER_OPEN_POS'], wait=True)
 

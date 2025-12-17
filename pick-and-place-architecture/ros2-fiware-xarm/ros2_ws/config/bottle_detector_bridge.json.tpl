@@ -1,3 +1,3 @@
 {
-  "API_URL": "http://192.168.1.131:22001"
+  "API_URL": "http://localhost:22001"
 }
