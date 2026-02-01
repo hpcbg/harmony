@@ -1,8 +1,0 @@
-albumentations
-opencv-contrib-python
-opencv-python
-jupyter
-matplotlib
-fastapi
-uvicorn
-pydantic
