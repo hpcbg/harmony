@@ -14,5 +14,5 @@ To run the Dashboard locally you need to execute:
 
 ```sh
 npm install
-npm run start
+npm run dev
 ```

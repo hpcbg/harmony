@@ -1,33 +1,64 @@
+import { nanoid } from "@reduxjs/toolkit";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  addPage,
+  editPageName,
+  selectPages,
+  stopEditPage,
+} from "../../store/pagesSlice";
 import { useState, useEffect } from "react";
 
-const PageFormModal = ({ isOpen, onClose, onSubmit, editingPage = null }) => {
-  const [pageName, setPageName] = useState("");
+export default function PageFormModal() {
+  const [name, setName] = useState("");
+  const dispatch = useDispatch();
+
+  // Get the editing page from Redux
+  const { editingPage, creatingNewPage } = useSelector(selectPages);
+  const pageName = editingPage ? editingPage.name : creatingNewPage ? "" : "";
 
   useEffect(() => {
     if (editingPage) {
-      setPageName(editingPage.name);
+      setName(pageName ?? "");
     } else {
-      setPageName("");
+      setName(""); // always empty for new page
     }
-  }, [editingPage, isOpen]);
+  }, [editingPage, pageName]);
 
-  const handleSubmit = () => {
-    if (!pageName.trim()) return;
-    onSubmit(pageName);
-    setPageName("");
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const name = e.target.pageName.value.trim();
+    if (!name) return;
+
+    if (editingPage) {
+      dispatch(editPageName({ id: editingPage.id, name }));
+    } else if (creatingNewPage) {
+      dispatch(
+        addPage({
+          id: nanoid(), // generate id for new page
+          name: name,
+          widgets: {},
+        }),
+      );
+    }
+
+    dispatch(stopEditPage());
+    setName("");
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
-      handleSubmit();
-    }
+  const handleClose = () => {
+    dispatch(stopEditPage());
+    setName("");
   };
 
-  if (!isOpen) return null;
+  // Only render if editing or creating
+  if (!editingPage && !creatingNewPage) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-lg shadow-xl w-full max-w-md p-6"
+      >
         <h3 className="text-xl font-bold mb-4">
           {editingPage ? "Edit Page" : "Create New Page"}
         </h3>
@@ -36,35 +67,33 @@ const PageFormModal = ({ isOpen, onClose, onSubmit, editingPage = null }) => {
           <label className="block text-sm font-medium mb-2">Page Name</label>
           <input
             type="text"
-            value={pageName}
-            onChange={(e) => setPageName(e.target.value)}
-            onKeyPress={handleKeyPress}
-            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            name="pageName"
+            defaultValue={pageName}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Enter page name"
-            autoFocus
           />
         </div>
 
         <div className="flex gap-3">
           <button
-            onClick={handleSubmit}
-            disabled={!pageName.trim()}
+            type="submit"
+            disabled={!name.trim()}
             className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg 
-                     hover:bg-blue-600 disabled:opacity-50 
-                     disabled:cursor-not-allowed transition-colors"
+                       hover:bg-blue-600 disabled:opacity-50 
+                       disabled:cursor-not-allowed transition-colors"
           >
             {editingPage ? "Update" : "Create"}
           </button>
           <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors"
+            type="button"
+            onClick={handleClose}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
-};
-
-export default PageFormModal;
+}

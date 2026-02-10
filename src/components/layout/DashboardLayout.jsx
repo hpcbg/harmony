@@ -1,47 +1,28 @@
-import Sidebar from "./Sidebar";
-import Header from "./Header";
+import { useSelector } from "react-redux";
+import Sidebar from "../Sidebar";
+import Header from "../Header";
+import WidgetFormModal from "../modals/WidgetFormModal";
+import PageFormModal from "../modals/PageFormModal";
+import { selectPages } from "../../store/pagesSlice.js";
 
-const DashboardLayout = ({
-  pages,
-  currentPage,
-  isEditMode,
-  onPageChange,
-  onAddPage,
-  onReorderPages,
-  onAddWidget,
-  onShowLibrary,
-  children,
-}) => {
+export default function DashboardLayout({ children }) {
+  const { pages, currentPage } = useSelector(selectPages);
+
   const currentPageData = pages.find((p) => p.id === currentPage);
   const isSettingsPage = currentPage === "settings";
-  const pageTitle = isSettingsPage
-    ? "Settings"
-    : currentPageData?.name || "Dashboard";
+  const pageTitle = isSettingsPage ? "Settings" : currentPageData?.name;
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar
-        pages={pages}
-        currentPage={currentPage}
-        onPageChange={onPageChange}
-        onAddPage={onAddPage}
-        onReorderPages={onReorderPages}
-        isEditMode={isEditMode}
-      />
+      <Sidebar />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header
-          title={pageTitle}
-          isSettingsPage={isSettingsPage}
-          isEditMode={isEditMode}
-          onAddWidget={onAddWidget}
-          onShowLibrary={onShowLibrary}
-        />
+        <Header title={pageTitle} />
 
         <div className="flex-1 overflow-hidden">{children}</div>
       </div>
+      <WidgetFormModal />
+      <PageFormModal />
     </div>
   );
-};
-
-export default DashboardLayout;
+}
