@@ -13,6 +13,10 @@ import useConfirm from "../../hooks/useConfirm";
 import ConfirmModal from "../modals/ConfirmModal";
 
 export default function DraggableWidget({ widget, position }) {
+  const GRID_SIZE = 20;
+
+  const snapToGrid = (value) => Math.floor(value / GRID_SIZE) * GRID_SIZE;
+
   const dispatch = useDispatch();
   const { currentPage, editMode } = useSelector(selectPages);
 
@@ -66,8 +70,8 @@ export default function DraggableWidget({ widget, position }) {
     e.preventDefault();
     setIsDragging(true);
     dragStartRef.current = {
-      mouseX: e.clientX,
-      mouseY: e.clientY,
+      mouseX: snapToGrid(e.clientX),
+      mouseY: snapToGrid(e.clientY),
       widgetX: position.x,
       widgetY: position.y,
     };
@@ -114,6 +118,13 @@ export default function DraggableWidget({ widget, position }) {
       if (isResizing) {
         const deltaX = e.clientX - resizeStartRef.current.mouseX;
         const deltaY = e.clientY - resizeStartRef.current.mouseY;
+        const newWidth = snapToGrid(
+          Math.max(50, resizeStartRef.current.width + deltaX),
+        );
+        const newHeight = snapToGrid(
+          Math.max(50, resizeStartRef.current.height + deltaY),
+        );
+
         dispatch(
           resizeWidget({
             pageId: currentPage,
@@ -121,8 +132,8 @@ export default function DraggableWidget({ widget, position }) {
             position: {
               x: resizeStartRef.current.widgetX,
               y: resizeStartRef.current.widgetY,
-              width: Math.max(50, resizeStartRef.current.width + deltaX),
-              height: Math.max(50, resizeStartRef.current.height + deltaY),
+              width: newWidth,
+              height: newHeight,
             },
           }),
         );
