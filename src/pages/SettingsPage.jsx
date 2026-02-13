@@ -117,7 +117,7 @@ export default function SettingsPage() {
     input.click();
   };
 
-  const exportConfig = () => {
+  const exportConfig = async () => {
     const config = {
       pages: pages
         .filter((p) => p.id !== "settings")
@@ -135,12 +135,38 @@ export default function SettingsPage() {
     const blob = new Blob([JSON.stringify(config, null, 2)], {
       type: "application/json",
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "dashboard-config.json";
-    a.click();
-    URL.revokeObjectURL(url);
+
+    if ("showSaveFilePicker" in window) {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: "dashboard-config.json",
+          types: [
+            {
+              description: "JSON Files",
+              accept: { "application/json": [".json"] },
+            },
+          ],
+        });
+
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+      } catch (err) {
+        // User cancelled the dialog or error occurred
+        if (err.name !== "AbortError") {
+          console.error("Export error:", err);
+          alert("Failed to export configuration");
+        }
+      }
+    } else {
+      // Fallback for browsers that don't support File System Access API
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "dashboard-config.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   return (
