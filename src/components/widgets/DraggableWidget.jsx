@@ -22,6 +22,7 @@ export default function DraggableWidget({ widget, position }) {
 
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [containerBounds, setContainerBounds] = useState(null);
 
   const { confirm, openConfirm, closeConfirm, isOpen } = useConfirm();
 
@@ -37,6 +38,29 @@ export default function DraggableWidget({ widget, position }) {
   });
 
   const ref = useRef(null);
+
+  // Get container bounds when component mounts or when dragging/resizing starts
+  useEffect(() => {
+    const updateContainerBounds = () => {
+      if (ref.current && ref.current.parentElement) {
+        const parent = ref.current.parentElement;
+        const rect = parent.getBoundingClientRect();
+        setContainerBounds({
+          width: parent.clientWidth,
+          height: parent.clientHeight,
+          left: rect.left,
+          top: rect.top,
+        });
+      }
+    };
+
+    updateContainerBounds();
+    window.addEventListener("resize", updateContainerBounds);
+
+    return () => {
+      window.removeEventListener("resize", updateContainerBounds);
+    };
+  }, []);
 
   const confirmRemoveWidget = (widgetId) => {
     openConfirm({
@@ -97,17 +121,33 @@ export default function DraggableWidget({ widget, position }) {
     if (!isDragging && !isResizing) return;
 
     const handleMouseMove = (e) => {
+      if (!containerBounds) return;
+
       if (isDragging) {
         const deltaX = e.clientX - dragStartRef.current.mouseX;
         const deltaY = e.clientY - dragStartRef.current.mouseY;
+
+        const widgetWidth = position.width || 300;
+        const widgetHeight = position.height || 200;
+
+        // Calculate new position
+        let newX = dragStartRef.current.widgetX + deltaX;
+        let newY = dragStartRef.current.widgetY + deltaY;
+
+        // Constrain to container bounds
+        newX = Math.max(0, Math.min(newX, containerBounds.width - widgetWidth));
+        newY = Math.max(
+          0,
+          Math.min(newY, containerBounds.height - widgetHeight),
+        );
 
         dispatch(
           moveWidgetOnPage({
             pageId: currentPage,
             widgetId: widget.id,
             position: {
-              x: dragStartRef.current.widgetX + deltaX,
-              y: dragStartRef.current.widgetY + deltaY,
+              x: newX,
+              y: newY,
               width: position.width,
               height: position.height,
             },
@@ -118,12 +158,28 @@ export default function DraggableWidget({ widget, position }) {
       if (isResizing) {
         const deltaX = e.clientX - resizeStartRef.current.mouseX;
         const deltaY = e.clientY - resizeStartRef.current.mouseY;
-        const newWidth = snapToGrid(
-          Math.max(50, resizeStartRef.current.width + deltaX),
-        );
-        const newHeight = snapToGrid(
-          Math.max(50, resizeStartRef.current.height + deltaY),
-        );
+
+        // Calculate new dimensions
+        let newWidth = Math.max(50, resizeStartRef.current.width + deltaX);
+        let newHeight = Math.max(50, resizeStartRef.current.height + deltaY);
+
+        // Constrain width to not exceed container boundary
+        const maxWidth = containerBounds.width - resizeStartRef.current.widgetX;
+        newWidth = Math.min(newWidth, maxWidth);
+
+        // Constrain height to not exceed container boundary
+        const maxHeight =
+          containerBounds.height - resizeStartRef.current.widgetY;
+        newHeight = Math.min(newHeight, maxHeight);
+
+        if (widget.type == "button") {
+          newWidth = Math.max(200, snapToGrid(newWidth));
+          newHeight = Math.max(120, snapToGrid(newHeight));
+        } else {
+          // Apply snap to grid
+          newWidth = Math.max(300, snapToGrid(newWidth));
+          newHeight = Math.max(200, snapToGrid(newHeight));
+        }
 
         dispatch(
           resizeWidget({
@@ -152,7 +208,7 @@ export default function DraggableWidget({ widget, position }) {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, isResizing, dispatch, widget.id]);
+  }, [isDragging, isResizing, dispatch, widget.id, containerBounds]);
 
   return (
     <div
