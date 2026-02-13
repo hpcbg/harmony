@@ -18,7 +18,7 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="w-full h-full relative bg-gray-50">
+    <div className="w-full overflow-y-auto h-full relative bg-gray-50">
       {/* Render widgets */}
       {Object.keys(pageWidgets).length > 0 ? (
         Object.entries(pageWidgets).map(([widgetId, position]) => {
