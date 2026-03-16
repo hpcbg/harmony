@@ -79,6 +79,7 @@ class UserRequestsMonitor(py_trees.behaviour.Behaviour):
         super().__init__(name)
         self.start_button_subscriber = None
         self.stop_button_subscriber = None
+        self.voice_command_subscriber = None
         self.node = None
         self.blackboard = py_trees.blackboard.Client(name=name)
         self.blackboard.register_key(
@@ -98,6 +99,9 @@ class UserRequestsMonitor(py_trees.behaviour.Behaviour):
         self.stop_button_subscriber = self.node.create_subscription(
             Bool, '/user_inputs/stop_button', self.stop_button_callback, 1
         )
+        self.voice_command_subscriber = self.node.create_subscription(
+            String, '/user_inputs/voice_command', self.voice_command_callback, 1
+        )
 
     def start_button_callback(self, msg):
         if msg.data and self.blackboard.stage == Stages.IDLE:
@@ -109,6 +113,12 @@ class UserRequestsMonitor(py_trees.behaviour.Behaviour):
         if msg.data and self.blackboard.stage != Stages.IDLE:
             self.blackboard.stage = Stages.IDLE
             self.blackboard.status = "User aborted Pick and Place system skill."
+            self.logger.info(self.blackboard.status)
+
+    def voice_command_callback(self, msg):
+        if msg.data == "PICK" and self.blackboard.stage == Stages.IDLE:
+            self.blackboard.stage = Stages.ACTIVE
+            self.blackboard.status = "User started Pick and Place system skill."
             self.logger.info(self.blackboard.status)
 
     def update(self):
