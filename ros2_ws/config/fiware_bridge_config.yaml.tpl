@@ -22,6 +22,16 @@ fiware_to_ros:
     ros_topic: "/angle"
     ros_msg_type: "std_msgs/Int32"
 
+  - fiware_entity: "VoiceCommand:operator-1"
+    fiware_attribute: "command"
+    ros_topic: "/user_inputs/voice_command"
+    ros_msg_type: "std_msgs/String"
+  
+  - fiware_entity: "GestureDetector:operator-1"
+    fiware_attribute: "command"
+    ros_topic: "/user_inputs/gesture_command"
+    ros_msg_type: "std_msgs/String"
+
 ros_to_fiware:
   - ros_topic: "/system_skill_pick_and_place/status"
     ros_msg_type: "std_msgs/String"

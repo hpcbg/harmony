@@ -7,6 +7,7 @@ import yaml
 import os
 from importlib import import_module
 from ament_index_python.packages import get_package_share_directory
+from datetime import datetime, timezone
 
 
 class ConfigurableFiwareBridge(Node):
@@ -40,14 +41,11 @@ class ConfigurableFiwareBridge(Node):
 
         if fiware_host:
             self.config['fiware']['host'] = fiware_host
-            self.get_logger().info(f'FIWARE host overridden to: {fiware_host}')
         if fiware_port > 0:
             self.config['fiware']['port'] = fiware_port
-            self.get_logger().info(f'FIWARE port overridden to: {fiware_port}')
 
         self.orion_url = f"http://{self.config['fiware']['host']}:{self.config['fiware']['port']}/v2"
         self.fiware_headers = {
-            # 'Content-Type': 'application/json',
             'Fiware-Service': self.config['fiware']['service'],
             'Fiware-ServicePath': self.config['fiware']['service_path']
         }
@@ -56,16 +54,23 @@ class ConfigurableFiwareBridge(Node):
         self.ros_subscribers = {}
         self.message_classes = {}
 
+        # Track last seen timestamp per (entity_id, attribute) pair
+        # Key: (entity_id, attribute)  Value: ISO timestamp string from FIWARE metadata
+        self._last_timestamps: dict[tuple, str] = {}
+
         self.setup_ros_to_fiware_bridges()
         self.setup_fiware_to_ros_bridges()
 
         polling_interval = self.config.get('polling_interval', 1.0)
-        self.timer = self.create_timer(
-            polling_interval, self.poll_fiware_entities)
+        self.timer = self.create_timer(polling_interval, self.poll_fiware_entities)
 
         self.get_logger().info('Configurable FIWARE Bridge started!')
         self.get_logger().info(f'Loaded config from: {config_file}')
         self.log_configuration()
+
+    # ------------------------------------------------------------------ #
+    #  Unchanged helpers (load_config, log_configuration, etc.)           #
+    # ------------------------------------------------------------------ #
 
     def load_config(self, config_file):
         try:
@@ -95,21 +100,17 @@ class ConfigurableFiwareBridge(Node):
                 self.get_logger().info(
                     f'  {mapping["ros_topic"]} → {entity}.{mapping["fiware_attribute"]}')
             else:
-                attrs = [a['name']
-                         for a in mapping.get('fiware_attributes', [])]
+                attrs = [a['name'] for a in mapping.get('fiware_attributes', [])]
                 self.get_logger().info(
                     f'  {mapping["ros_topic"]} → {entity}.[{", ".join(attrs)}]')
 
     def get_message_class(self, msg_type_str):
         if msg_type_str in self.message_classes:
             return self.message_classes[msg_type_str]
-
         try:
             package, message = msg_type_str.split('/')
-
             module = import_module(f'{package}.msg')
             msg_class = getattr(module, message)
-
             self.message_classes[msg_type_str] = msg_class
             return msg_class
         except Exception as e:
@@ -121,7 +122,6 @@ class ConfigurableFiwareBridge(Node):
         for mapping in self.config.get('fiware_to_ros', []):
             topic = mapping['ros_topic']
             msg_type = mapping['ros_msg_type']
-
             msg_class = self.get_message_class(msg_type)
             if msg_class:
                 publisher = self.create_publisher(msg_class, topic, 10)
@@ -130,27 +130,21 @@ class ConfigurableFiwareBridge(Node):
                     'msg_class': msg_class,
                     'mapping': mapping
                 }
-                self.get_logger().info(
-                    f'Created publisher: {topic} ({msg_type})')
+                self.get_logger().info(f'Created publisher: {topic} ({msg_type})')
 
     def setup_ros_to_fiware_bridges(self):
         for mapping in self.config.get('ros_to_fiware', []):
             topic = mapping['ros_topic']
             msg_type = mapping['ros_msg_type']
-
             msg_class = self.get_message_class(msg_type)
             if msg_class:
                 callback = self.create_ros_callback(mapping)
-                subscriber = self.create_subscription(
-                    msg_class, topic, callback, 10)
-
+                subscriber = self.create_subscription(msg_class, topic, callback, 10)
                 self.ros_subscribers[topic] = {
                     'subscriber': subscriber,
                     'mapping': mapping
                 }
-                self.get_logger().info(
-                    f'Created subscriber: {topic} ({msg_type})')
-
+                self.get_logger().info(f'Created subscriber: {topic} ({msg_type})')
                 self.initialize_fiware_entity(mapping)
 
     def create_ros_callback(self, mapping):
@@ -166,78 +160,108 @@ class ConfigurableFiwareBridge(Node):
         try:
             response = requests.get(url, headers=self.fiware_headers)
             if response.status_code == 404:
-                entity = {
-                    "id": entity_id,
-                    "type": entity_type
-                }
+                entity = {"id": entity_id, "type": entity_type}
 
                 if 'fiware_attribute' in mapping:
-                    entity[mapping['fiware_attribute']] = {
-                        "type": "Text",
-                        "value": ""
-                    }
+                    entity[mapping['fiware_attribute']] = {"type": "Text", "value": ""}
                 elif 'fiware_attributes' in mapping:
                     for attr in mapping['fiware_attributes']:
-                        entity[attr['name']] = {
-                            "type": "Number",
-                            "value": 0.0
-                        }
+                        entity[attr['name']] = {"type": "Number", "value": 0.0}
 
                 create_url = f"{self.orion_url}/entities"
-                response = requests.post(
-                    create_url, json=entity, headers=self.fiware_headers)
+                response = requests.post(create_url, json=entity, headers=self.fiware_headers)
 
                 if response.status_code == 201:
-                    self.get_logger().info(
-                        f'Created FIWARE entity: {entity_id}')
+                    self.get_logger().info(f'Created FIWARE entity: {entity_id}')
                 else:
                     self.get_logger().error(
                         f'Failed to create entity {entity_id}: {response.text}')
             else:
                 self.get_logger().info(f'FIWARE entity exists: {entity_id}')
         except Exception as e:
-            self.get_logger().error(
-                f'Error initializing entity {entity_id}: {str(e)}')
+            self.get_logger().error(f'Error initializing entity {entity_id}: {str(e)}')
+
+    # ------------------------------------------------------------------ #
+    #  Timestamp-aware polling                                             #
+    # ------------------------------------------------------------------ #
+
+    def _parse_fiware_ts(self, ts_str: str | None) -> str:
+        """
+        Normalise a FIWARE ISO-8601 timestamp to a plain string we can
+        compare with ==.  Returns an empty string when ts_str is None so
+        the first poll always triggers a publish.
+        """
+        return ts_str.strip() if ts_str else ''
 
     def poll_fiware_entities(self):
         for topic, pub_info in self.ros_publishers.items():
-            mapping = pub_info['mapping']
+            mapping  = pub_info['mapping']
             entity_id = mapping['fiware_entity']
             attribute = mapping['fiware_attribute']
 
             try:
-                url = f"{self.orion_url}/entities/{entity_id}"
+                # Request the attribute's metadata so we get dateModified
+                url = (
+                    f"{self.orion_url}/entities/{entity_id}"
+                    f"?attrs={attribute}&metadata=dateModified"
+                )
                 response = requests.get(url, headers=self.fiware_headers)
 
-                if response.status_code == 200:
-                    data = response.json()
-                    value = data.get(attribute, {}).get('value')
+                if response.status_code != 200:
+                    self.get_logger().warning(
+                        f'Unexpected status {response.status_code} for {entity_id}')
+                    continue
 
-                    if value is not None:
-                        if 'value_mapping' in mapping:
-                            value = mapping['value_mapping'].get(
-                                str(value), value)
+                data      = response.json()
+                attr_data = data.get(attribute, {})
+                value     = attr_data.get('value')
 
-                        msg = self.create_ros_message(
-                            pub_info['msg_class'], value)
-                        if msg:
-                            pub_info['publisher'].publish(msg)
-                            self.get_logger().debug(
-                                f'{entity_id}.{attribute} → {topic}: {value}')
+                if value is None:
+                    continue
+
+                # ── Timestamp check ──────────────────────────────────────
+                ts_raw = (
+                    attr_data
+                    .get('metadata', {})
+                    .get('dateModified', {})
+                    .get('value')          # e.g. "2024-05-10T12:34:56.789Z"
+                )
+                ts = self._parse_fiware_ts(ts_raw)
+                key = (entity_id, attribute)
+
+                if ts and ts == self._last_timestamps.get(key):
+                    # Data has not changed since last poll – skip publish
+                    self.get_logger().debug(
+                        f'{entity_id}.{attribute}: no new data (ts={ts})')
+                    continue
+
+                # New or updated data → publish and remember timestamp
+                self._last_timestamps[key] = ts
+
+                if 'value_mapping' in mapping:
+                    value = mapping['value_mapping'].get(str(value), value)
+
+                msg = self.create_ros_message(pub_info['msg_class'], value)
+                if msg:
+                    pub_info['publisher'].publish(msg)
+                    self.get_logger().info(
+                        f'{entity_id}.{attribute} → {topic}: {value}  (ts={ts or "n/a"})')
 
             except Exception as e:
                 self.get_logger().error(f'Error polling {entity_id}: {str(e)}')
 
+    # ------------------------------------------------------------------ #
+    #  Unchanged message helpers                                           #
+    # ------------------------------------------------------------------ #
+
     def create_ros_message(self, msg_class, value):
         try:
             msg = msg_class()
-
             if hasattr(msg, 'data'):
                 msg.data = value
             else:
                 self.get_logger().warn(
                     f'Complex message type not fully supported: {msg_class}')
-
             return msg
         except Exception as e:
             self.get_logger().error(f'Error creating message: {str(e)}')
@@ -246,31 +270,26 @@ class ConfigurableFiwareBridge(Node):
     def handle_ros_message(self, msg, mapping):
         entity_id = mapping['fiware_entity']
         url = f"{self.orion_url}/entities/{entity_id}/attrs"
-
         payload = {}
 
         try:
             if 'fiware_attribute' in mapping:
                 field_name = mapping.get('ros_field', 'data')
                 value = self.get_nested_attribute(msg, field_name)
-
                 payload[mapping['fiware_attribute']] = {
                     "type": "Text" if isinstance(value, str) else "Number",
                     "value": value
                 }
-
             elif 'fiware_attributes' in mapping:
                 for attr_mapping in mapping['fiware_attributes']:
                     field_name = attr_mapping['ros_field']
                     value = self.get_nested_attribute(msg, field_name)
-
                     payload[attr_mapping['name']] = {
                         "type": "Number",
                         "value": float(value) if value is not None else 0.0
                     }
 
-            response = requests.patch(
-                url, json=payload, headers=self.fiware_headers)
+            response = requests.patch(url, json=payload, headers=self.fiware_headers)
 
             if response.status_code == 204:
                 self.get_logger().debug(
@@ -278,7 +297,6 @@ class ConfigurableFiwareBridge(Node):
             else:
                 self.get_logger().error(
                     f'Failed to update {entity_id}: {response.text}')
-
         except Exception as e:
             self.get_logger().error(f'Error handling ROS message: {str(e)}')
 
@@ -297,9 +315,7 @@ class ConfigurableFiwareBridge(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-
     node = ConfigurableFiwareBridge()
-
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
