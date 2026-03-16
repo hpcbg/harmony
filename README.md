@@ -2,6 +2,10 @@
 
 This repository contains ROS 2 packages which allows integration of ROS 2 and FIWARE for execution of bottle detection and pick and place operation with the xArm7 robot.
 
+## Instalation
+
+You need to install Py Trees to your ROS 2 installation: `sudo apt install ros-jazzy-py-trees`.
+
 ## Start Procedure
 
 You need to create the configuration files in [./ros2_ws/config/](./ros2_ws/config/). Use the provided sample config files and create similar files but without the `.tpl` extension.
