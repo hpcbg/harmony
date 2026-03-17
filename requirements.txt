@@ -1,0 +1,4 @@
+# MIT-compatible dependencies for speech_recognizer.py
+vosk>=0.3.45          # MIT License — offline speech recognition engine
+sounddevice>=0.4.6    # MIT License — cross-platform audio I/O via PortAudio
+requests>=2.31.0      # Apache 2.0  — HTTP client for FIWARE NGSI-LD publishing
