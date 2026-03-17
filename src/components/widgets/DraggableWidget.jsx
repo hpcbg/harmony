@@ -173,12 +173,12 @@ export default function DraggableWidget({ widget, position }) {
         newHeight = Math.min(newHeight, maxHeight);
 
         if (widget.type == "button") {
-          newWidth = Math.max(200, snapToGrid(newWidth));
-          newHeight = Math.max(120, snapToGrid(newHeight));
+          newWidth = Math.max(100, snapToGrid(newWidth));
+          newHeight = Math.max(80, snapToGrid(newHeight));
         } else {
           // Apply snap to grid
-          newWidth = Math.max(300, snapToGrid(newWidth));
-          newHeight = Math.max(200, snapToGrid(newHeight));
+          newWidth = Math.max(200, snapToGrid(newWidth));
+          newHeight = Math.max(100, snapToGrid(newHeight));
         }
 
         dispatch(
@@ -213,9 +213,8 @@ export default function DraggableWidget({ widget, position }) {
   return (
     <div
       ref={ref}
-      className={`absolute bg-white rounded-lg shadow-lg ${
-        editMode ? (isDragging ? "cursor-grabbing" : "cursor-grab") : ""
-      }`}
+      className={`absolute bg-white rounded-lg shadow-lg ${editMode ? (isDragging ? "cursor-grabbing" : "cursor-grab") : ""
+        }`}
       style={{
         left: position.x,
         top: position.y,
