@@ -7,9 +7,9 @@ For the speech recognition the Vosk models are used. The default set of keywords
 The FIWARE must be running. The voice command detection uses Fiware-Service and Fiware-Servicepath headers to scope entities into a logical tenant — the same pattern used by IoT Agents and M5Stack devices:
 
 ```
-        fiware_service     = "openiot"
-        fiware_servicepath = "/"
-        device_id          = "VoiceCommand:operator-1"
+fiware_service     = "openiot"
+fiware_servicepath = "/"
+device_id          = "VoiceCommand:operator-1"
 ```
 
 On first call, creates the entity with `POST /v2/entities`. Subsequent calls update attributes with `PATCH /v2/entities/<id>/attrs`.
@@ -22,4 +22,4 @@ On first call, creates the entity with `POST /v2/entities`. Subsequent calls upd
 
 ## Run
 
-In order to run it you need a running FIWARE and you can run the sciprt with `python voice-commands-fiware.py --fiware` or you can use the provided [./run.sh](./run.sh). Make sure that you are running in a correct Python environment.
+In order to run it you need a running FIWARE and you can run the script with `python voice-commands-fiware.py --fiware` or you can use the provided [./run.sh](./run.sh). Make sure that you are running in a correct Python environment.
