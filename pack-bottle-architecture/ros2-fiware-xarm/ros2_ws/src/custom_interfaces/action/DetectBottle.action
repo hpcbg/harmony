@@ -1,0 +1,12 @@
+# Goal
+bool run
+
+---
+# Result
+bool success
+string job_id
+string message
+
+---
+# Feedback
+string status

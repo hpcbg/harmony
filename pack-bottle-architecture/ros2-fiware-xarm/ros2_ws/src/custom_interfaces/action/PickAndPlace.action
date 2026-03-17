@@ -1,0 +1,11 @@
+# Goal
+string pick_and_place_json
+
+---
+# Result
+bool success
+string message
+
+---
+# Feedback
+string state
