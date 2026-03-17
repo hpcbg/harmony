@@ -1,0 +1,424 @@
+import rclpy
+from rclpy.node import Node
+from rclpy.action import ActionServer, GoalResponse, CancelResponse
+from std_msgs.msg import String
+import json
+import os
+import utils
+from ament_index_python.packages import get_package_share_directory
+import time
+
+from custom_interfaces.action import Move
+
+
+class XArmPackBottle(Node):
+
+    def __init__(self):
+        super().__init__('xarm_pack_bottle')
+
+        pkg = get_package_share_directory('xarm_pack_bottle')
+        default_config_path = os.path.join(
+            pkg, 'config', 'xarm_pack_bottle.json')
+
+        self.declare_parameter('config_path', default_config_path)
+
+        config_path = self.get_parameter('config_path').value
+        self.get_logger().info(f"Loading config from: {config_path}")
+
+        self.CONFIG = utils.json_config.load(config_path)
+
+        if self.CONFIG['EMULATE_ROBOT']:
+            from utils.xarm_emulator import XArmAPI
+        else:
+            from xarm.wrapper import XArmAPI
+
+        self.arm = XArmAPI(self.CONFIG['ROBOT_IP'])
+        self.arm.connect()
+        self.arm.motion_enable(True)
+        self.arm.set_mode(0)
+        self.arm.set_state(0)
+        self.arm.clean_error()
+        self.arm.set_gripper_enable(True)
+
+        self.status_pub = self.create_publisher(
+            String, '/xarm_pack_bottle/robot_status', 10)
+
+        self.busy = False
+
+        self._pick_action_server = ActionServer(
+            self,
+            Move,
+            '/xarm_pack_bottle/pick',
+            execute_callback=self.pick_execute_cb,
+            goal_callback=self.goal_cb,
+            cancel_callback=self.cancel_cb
+        )
+
+        self._fill_action_server = ActionServer(
+            self,
+            Move,
+            '/xarm_pack_bottle/fill',
+            execute_callback=self.fill_execute_cb,
+            goal_callback=self.goal_cb,
+            cancel_callback=self.cancel_cb
+        )
+
+        self._move_to_cap_action_server = ActionServer(
+            self,
+            Move,
+            '/xarm_pack_bottle/move_to_cap',
+            execute_callback=self.move_to_cap_execute_cb,
+            goal_callback=self.goal_cb,
+            cancel_callback=self.cancel_cb
+        )
+
+        self._cap_action_server = ActionServer(
+            self,
+            Move,
+            '/xarm_pack_bottle/cap',
+            execute_callback=self.cap_execute_cb,
+            goal_callback=self.goal_cb,
+            cancel_callback=self.cancel_cb
+        )
+
+        self._handover_action_server = ActionServer(
+            self,
+            Move,
+            '/xarm_pack_bottle/handover',
+            execute_callback=self.handover_execute_cb,
+            goal_callback=self.goal_cb,
+            cancel_callback=self.cancel_cb
+        )
+
+        self.publish_status('IDLE')
+        self.get_logger().info("XArm Action Server ready")
+
+    def publish_status(self, status):
+        msg = String()
+        msg.data = status
+        self.status_pub.publish(msg)
+
+    def send_move_feedback(self, goal_handle, text):
+        self.get_logger().info(text)
+        fb = Move.Feedback()
+        fb.state = text
+        goal_handle.publish_feedback(fb)
+
+    def move(self, x, y, z, r=180, p=0, yw=0):
+        self.arm.set_position(x, y, z, r, p, yw,
+                              wait=True, speed=900, mvacc=500)
+        self.get_logger().info(
+            f"Move to ({x}, {y}, {z}) with orientation ({r}, {p}, {yw})")
+
+    def goal_cb(self, goal_request):
+        if self.busy:
+            self.get_logger().warn("Rejecting goal: robot is BUSY")
+            return GoalResponse.REJECT
+        return GoalResponse.ACCEPT
+
+    def cancel_cb(self, goal_handle):
+        self.get_logger().warn("Cancel requested (not supported)")
+        return CancelResponse.REJECT
+
+    async def pick_execute_cb(self, goal_handle):
+        self.busy = True
+        self.publish_status('BUSY')
+
+        result = Move.Result()
+
+        try:
+            self.get_logger().info("Executing pick")
+
+            self.run_pick(goal_handle)
+
+            result.success = True
+            result.message = "Pick completed"
+            self.publish_status('OK')
+
+            goal_handle.succeed()
+
+        except Exception as e:
+            self.get_logger().error(str(e))
+            result.success = False
+            result.message = str(e)
+            self.publish_status('ERROR')
+            goal_handle.abort()
+
+        self.busy = False
+        return result
+
+    async def fill_execute_cb(self, goal_handle):
+        self.busy = True
+        self.publish_status('BUSY')
+
+        result = Move.Result()
+
+        try:
+            self.get_logger().info("Executing fill")
+
+            self.run_fill(goal_handle)
+
+            result.success = True
+            result.message = "Fill completed"
+            self.publish_status('OK')
+
+            goal_handle.succeed()
+
+        except Exception as e:
+            self.get_logger().error(str(e))
+            result.success = False
+            result.message = str(e)
+            self.publish_status('ERROR')
+            goal_handle.abort()
+
+        self.busy = False
+        return result
+
+    async def move_to_cap_execute_cb(self, goal_handle):
+        self.busy = True
+        self.publish_status('BUSY')
+
+        result = Move.Result()
+
+        try:
+            self.get_logger().info("Executing move to cap")
+
+            self.run_move_to_cap(goal_handle)
+
+            result.success = True
+            result.message = "Move to cap completed"
+            self.publish_status('OK')
+
+            goal_handle.succeed()
+
+        except Exception as e:
+            self.get_logger().error(str(e))
+            result.success = False
+            result.message = str(e)
+            self.publish_status('ERROR')
+            goal_handle.abort()
+
+        self.busy = False
+        return result
+
+    async def cap_execute_cb(self, goal_handle):
+        self.busy = True
+        self.publish_status('BUSY')
+
+        result = Move.Result()
+
+        try:
+            self.get_logger().info("Executing cap")
+
+            self.run_cap(goal_handle)
+
+            result.success = True
+            result.message = "Cap completed"
+            self.publish_status('OK')
+
+            goal_handle.succeed()
+
+        except Exception as e:
+            self.get_logger().error(str(e))
+            result.success = False
+            result.message = str(e)
+            self.publish_status('ERROR')
+            goal_handle.abort()
+
+        self.busy = False
+        return result
+
+    async def handover_execute_cb(self, goal_handle):
+        self.busy = True
+        self.publish_status('BUSY')
+
+        result = Move.Result()
+
+        try:
+            self.get_logger().info("Executing handover")
+
+            self.run_handover(goal_handle)
+
+            result.success = True
+            result.message = "Handover completed"
+            self.publish_status('OK')
+
+            goal_handle.succeed()
+
+        except Exception as e:
+            self.get_logger().error(str(e))
+            result.success = False
+            result.message = str(e)
+            self.publish_status('ERROR')
+            goal_handle.abort()
+
+        self.busy = False
+        return result
+
+    def run_pick(self, goal_handle):
+        d = json.loads(goal_handle.request.pose_json)
+        pick_pose = d['pick_pose']
+
+        self.send_move_feedback(goal_handle, "Pick: Move to home")
+        self.arm.set_servo_angle(
+            angle=self.CONFIG['HOME_POS_JOINTS_DEG'], wait=True)
+        self.arm.set_gripper_position(
+            self.CONFIG['GRIPPER_OPEN_POS'], wait=True)
+        time.sleep(3)
+
+        self.send_move_feedback(goal_handle, "Pick: Approach pick position")
+        self.move(pick_pose['x'], pick_pose['y'], self.CONFIG['APPROACH_HEIGHT_MM'],
+                  pick_pose['roll_degrees'], pick_pose['pitch_degrees'], pick_pose['yaw_degrees'])
+
+        self.send_move_feedback(goal_handle, "Pick: Move to pick position")
+        self.move(pick_pose['x'], pick_pose['y'], pick_pose['z'],
+                  pick_pose['roll_degrees'], pick_pose['pitch_degrees'], pick_pose['yaw_degrees'])
+
+        time.sleep(2)
+        self.send_move_feedback(goal_handle, "Pick: Close gripper")
+        self.arm.set_gripper_position(
+            self.CONFIG['GRIPPER_CLOSE_POS'], wait=True)
+        time.sleep(2)
+
+        self.send_move_feedback(goal_handle, "Pick: Return to approach height")
+        self.move(pick_pose['x'], pick_pose['y'], self.CONFIG['APPROACH_HEIGHT_MM'],
+                  pick_pose['roll_degrees'], pick_pose['pitch_degrees'], pick_pose['yaw_degrees'])
+
+        self.send_move_feedback(
+            goal_handle, "Pick: Set after pick orientation")
+        self.move(pick_pose['x'], pick_pose['y'], self.CONFIG['APPROACH_HEIGHT_MM'],
+                  self.CONFIG['AFTER_PICK_RPY_DEG'][0], self.CONFIG['AFTER_PICK_RPY_DEG'][1],
+                  self.CONFIG['AFTER_PICK_RPY_DEG'][2])
+
+        self.send_move_feedback(
+            goal_handle, "Pick: Approach after pick position")
+        self.move(self.CONFIG['AFTER_PICK_POS_MM'][0], self.CONFIG['AFTER_PICK_POS_MM'][1],
+                  self.CONFIG['APPROACH_HEIGHT_MM'],
+                  self.CONFIG['AFTER_PICK_RPY_DEG'][0], self.CONFIG['AFTER_PICK_RPY_DEG'][1],
+                  self.CONFIG['AFTER_PICK_RPY_DEG'][2])
+
+        self.send_move_feedback(
+            goal_handle, "Pick: Move to after pick position")
+        self.move(self.CONFIG['AFTER_PICK_POS_MM'][0], self.CONFIG['AFTER_PICK_POS_MM'][1],
+                  self.CONFIG['AFTER_PICK_POS_MM'][2],
+                  self.CONFIG['AFTER_PICK_RPY_DEG'][0], self.CONFIG['AFTER_PICK_RPY_DEG'][1],
+                  self.CONFIG['AFTER_PICK_RPY_DEG'][2])
+
+        self.send_move_feedback(goal_handle, "Pick: Open gripper")
+        self.arm.set_gripper_position(
+            self.CONFIG['GRIPPER_OPEN_POS'], wait=True)
+        time.sleep(2)
+
+        self.send_move_feedback(
+            goal_handle, "Pick: Return to approach height")
+        self.move(self.CONFIG['AFTER_PICK_POS_MM'][0], self.CONFIG['AFTER_PICK_POS_MM'][1],
+                  self.CONFIG['APPROACH_HEIGHT_MM'],
+                  self.CONFIG['AFTER_PICK_RPY_DEG'][0], self.CONFIG['AFTER_PICK_RPY_DEG'][1],
+                  self.CONFIG['AFTER_PICK_RPY_DEG'][2])
+
+        self.send_move_feedback(
+            goal_handle, "Pick: Set bottom grip pick orientation")
+        self.move(self.CONFIG['AFTER_PICK_POS_MM'][0], self.CONFIG['AFTER_PICK_POS_MM'][1],
+                  self.CONFIG['APPROACH_HEIGHT_MM'],
+                  self.CONFIG['BOTTOM_GRIP_PICK_RPY_DEG'][0], self.CONFIG['BOTTOM_GRIP_PICK_RPY_DEG'][1],
+                  self.CONFIG['BOTTOM_GRIP_PICK_RPY_DEG'][2])
+
+        self.send_move_feedback(
+            goal_handle, "Pick: Move to bottom grip pick height")
+        self.move(self.CONFIG['AFTER_PICK_POS_MM'][0], self.CONFIG['AFTER_PICK_POS_MM'][1],
+                  self.CONFIG['BOTTOM_GRIP_HEIGHT_MM'],
+                  self.CONFIG['BOTTOM_GRIP_PICK_RPY_DEG'][0], self.CONFIG['BOTTOM_GRIP_PICK_RPY_DEG'][1],
+                  self.CONFIG['BOTTOM_GRIP_PICK_RPY_DEG'][2])
+
+        time.sleep(2)
+        self.send_move_feedback(goal_handle, "Pick: Close gripper")
+        self.arm.set_gripper_position(
+            self.CONFIG['GRIPPER_CLOSE_POS'], wait=True)
+        time.sleep(2)
+
+        self.send_move_feedback(
+            goal_handle, "Pick: Return to approach height")
+        self.move(self.CONFIG['AFTER_PICK_POS_MM'][0], self.CONFIG['AFTER_PICK_POS_MM'][1],
+                  self.CONFIG['APPROACH_HEIGHT_MM'],
+                  self.CONFIG['BOTTOM_GRIP_PICK_RPY_DEG'][0], self.CONFIG['BOTTOM_GRIP_PICK_RPY_DEG'][1],
+                  self.CONFIG['BOTTOM_GRIP_PICK_RPY_DEG'][2])
+
+        self.send_move_feedback(
+            goal_handle, "Pick: Set bottom grip move orientation")
+        self.move(self.CONFIG['AFTER_PICK_POS_MM'][0], self.CONFIG['AFTER_PICK_POS_MM'][1],
+                  self.CONFIG['APPROACH_HEIGHT_MM'],
+                  self.CONFIG['BOTTOM_GRIP_MOVE_RPY_DEG'][0], self.CONFIG['BOTTOM_GRIP_MOVE_RPY_DEG'][1],
+                  self.CONFIG['BOTTOM_GRIP_MOVE_RPY_DEG'][2])
+
+        time.sleep(3)
+
+    def run_fill(self, goal_handle):
+
+        self.send_move_feedback(
+            goal_handle, "Fill: Move to fill approach position")
+        self.move(self.CONFIG['FILL_APPROACH_POS_MM'][0], self.CONFIG['FILL_APPROACH_POS_MM'][1],
+                  self.CONFIG['FILL_APPROACH_POS_MM'][2],
+                  self.CONFIG['BOTTOM_GRIP_MOVE_RPY_DEG'][0], self.CONFIG['BOTTOM_GRIP_MOVE_RPY_DEG'][1],
+                  self.CONFIG['BOTTOM_GRIP_MOVE_RPY_DEG'][2])
+
+        self.send_move_feedback(goal_handle, "Fill: Move to fill position")
+        self.move(self.CONFIG['FILL_POS_MM'][0], self.CONFIG['FILL_POS_MM'][1],
+                  self.CONFIG['FILL_POS_MM'][2],
+                  self.CONFIG['BOTTOM_GRIP_MOVE_RPY_DEG'][0], self.CONFIG['BOTTOM_GRIP_MOVE_RPY_DEG'][1],
+                  self.CONFIG['BOTTOM_GRIP_MOVE_RPY_DEG'][2])
+
+        time.sleep(3)
+
+    def run_move_to_cap(self, goal_handle):
+        self.send_move_feedback(
+            goal_handle, "Cap: Return to fill approach position")
+        self.move(self.CONFIG['FILL_APPROACH_POS_MM'][0], self.CONFIG['FILL_APPROACH_POS_MM'][1],
+                  self.CONFIG['FILL_APPROACH_POS_MM'][2],
+                  self.CONFIG['BOTTOM_GRIP_MOVE_RPY_DEG'][0], self.CONFIG['BOTTOM_GRIP_MOVE_RPY_DEG'][1],
+                  self.CONFIG['BOTTOM_GRIP_MOVE_RPY_DEG'][2])
+
+        self.send_move_feedback(goal_handle, "Cap: Move to cap position")
+        self.move(self.CONFIG['CAP_POS_MM'][0], self.CONFIG['CAP_POS_MM'][1],
+                  self.CONFIG['CAP_POS_MM'][2],
+                  self.CONFIG['BOTTOM_GRIP_MOVE_RPY_DEG'][0], self.CONFIG['BOTTOM_GRIP_MOVE_RPY_DEG'][1],
+                  self.CONFIG['BOTTOM_GRIP_MOVE_RPY_DEG'][2])
+
+        self.send_move_feedback(
+            goal_handle, "Cap: Set cap joint to min degree")
+        self.arm.set_servo_angle(servo_id=self.CONFIG['CAP_JOINT_ID'],
+                                 angle=self.CONFIG['CAP_JOINT_MIN_MAX_DEG'][0], wait=True)
+
+        time.sleep(3)
+
+    def run_cap(self, goal_handle):
+        self.send_move_feedback(
+            goal_handle, "Cap: Set cap joint to max degree")
+        self.arm.set_servo_angle(servo_id=self.CONFIG['CAP_JOINT_ID'],
+                                 angle=self.CONFIG['CAP_JOINT_MIN_MAX_DEG'][1], wait=True)
+
+        time.sleep(3)
+
+    def run_handover(self, goal_handle):
+        self.send_move_feedback(goal_handle, "Handover: Open gripper")
+        self.arm.set_gripper_position(
+            self.CONFIG['GRIPPER_OPEN_POS'], wait=True)
+        time.sleep(5)
+
+        self.send_move_feedback(goal_handle, "Handover: Move to home")
+        self.arm.set_servo_angle(
+            angle=self.CONFIG['HOME_POS_JOINTS_DEG'], wait=True)
+
+        self.send_move_feedback(goal_handle, "Handover: Completed")
+        time.sleep(3)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = XArmPackBottle()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        node.get_logger().info("Shutting down XArm ROS bridge")
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
