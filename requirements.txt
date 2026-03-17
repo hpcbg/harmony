@@ -1,0 +1,5 @@
+# MIT-compatible dependencies for speech_recognizer.py
+opencv-python<=4.9
+numpy<=2
+mediapipe
+requests
