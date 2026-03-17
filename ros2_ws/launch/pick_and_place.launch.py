@@ -30,31 +30,23 @@ def generate_launch_description():
         }.items()
     )
 
-    task_pack_bottle = Node(
-        package='task_pack_bottle',
-        executable='task_pack_bottle',
+    system_skill_pick_and_place = Node(
+        package='system_skill_pick_and_place',
+        executable='system_skill_pick_and_place',
         output='screen'
     )
 
-    xarm_pack_bottle = Node(
-        package='xarm_pack_bottle',
-        executable='xarm_pack_bottle',
+    xarm_pick_and_place = Node(
+        package='xarm_pick_and_place',
+        executable='xarm_pick_and_place',
         parameters=[{
-                'config_path': './config/xarm_pack_bottle.json'
-        }],
-        output='screen'
-    )
-
-    filling_station = Node(
-        package='filling_station',
-        executable='filling_station',
-        output='screen'
+                'config_path': './config/xarm_pick_and_place.json'
+        }]
     )
 
     return LaunchDescription([
         bottle_detector_bridge,
         fiware_bridge,
-        task_pack_bottle,
-        xarm_pack_bottle,
-        filling_station
+        system_skill_pick_and_place,
+        xarm_pick_and_place
     ])
