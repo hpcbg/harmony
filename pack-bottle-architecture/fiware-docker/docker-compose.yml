@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo:4.4
+    container_name: mongo
+    hostname: mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - fiware
+    command: --bind_ip_all
+    volumes:
+      - mongo:/data/db
+
+  orion:
+    image: fiware/orion:4.3.0
+    container_name: orion
+    hostname: orion
+    depends_on:
+      - mongo
+    networks:
+      - fiware
+    ports:
+      - "1026:1026"
+    command: -dbURI mongodb://mongo:27017 -corsOrigin __ALL -corsMaxAge 86400 -logLevel DEBUG
+    restart: always
+
+networks:
+  fiware:
+    driver: bridge
+
+volumes:
+  mongo:
