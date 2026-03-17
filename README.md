@@ -8,11 +8,30 @@ The repository contains the code needed for dataset generation and model trainin
 
 ## Requirements
 
-The code is tested on Python 3.10.19 and Python 3.12. The packages contained in `requirements.txt` are required. 
+The code is tested on Python 3.12. The packages contained in `requirements.txt` are required. 
 
-Make sure that PyTorch is installed and can access the GPU correctly. You can check that everything work as expected with the Jupyter Notebook located in [./utils/bottle_detector.ipynb](./utils/bottle_detector.ipynb). You might also consider using CUDA for a faster computations. You can install CUDA with `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118`.
+Make sure that PyTorch is installed and can access the GPU correctly. You can check that everything work as expected with the Jupyter Notebook located in [./utils/bottle_detector.ipynb](./utils/bottle_detector.ipynb). You might also consider using CUDA for a faster computations.
 
 You can check for CUDA with: `python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"`.
+
+For older GPUs you will need older version of Python. For Ubuntu 24 it can be installed as follows:
+```bash
+# Add a repository for the older version of Python
+sudo apt update
+sudo apt install software-properties-common
+sudo add-apt-repository ppa:deadsnakes/ppa
+sudo apt update
+# Install Python 3.10
+sudo apt install python3.10 python3.10-venv python3.10-dev
+# Create a new virtual environment
+python3.10 -m venv torch_env
+# Install torch
+source torch_env/bin/activate
+pip install --upgrade pip
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+# Check the installation
+python -c "import torch; print(torch.cuda.is_available())"
+```
 
 ## Dataset Generation
 
@@ -39,6 +58,7 @@ utils/
 ```
 
 You can annotate the images with the provided annotation tool `python annotate_dataset.py --images data/images --output data/annotations.json --split`.
+
 **Tool controls:**
 - **1** - Annotate bottle
 - **2** - Annotate cap
@@ -85,6 +105,7 @@ python detect_bottles.py --model checkpoints/best_model.pth --webcam
 
 You need to configure the ArUco tag numbers, locations and the pick and place locations in the file `config/detect_obb.json`. You can use the `config/detect_obb.json.tpl` file for the first config file creation since the config file is not tracked by the repo.
 
+
 ## REST API App for Bottle Detection
 
 This repository provides a REST API App for execution of bottle detection and pick and place coordinates generation.
@@ -98,6 +119,8 @@ This will start the app at port `22001`.
 After starting the app you can access the API documentation at the following URL: http://localhost:22001/docs
 
 The documentation will provide you with all the information about the API and the Swager UI will allow you test and experiment with the different queries.
+
+**IMPORTANT:** After boot up you need to perform the initial calibration by placing markers in the plane at the specified location and executing a single task. Afterwards, the markers positions will be cached and updated only if there are present again in the plane.
 
 ## Other Utilities
 
