@@ -4,7 +4,7 @@ This folder contains the proposed architecture of the minimum viable product for
 
 The human operator uses IoT device to request the automatic bottle picking process. If there are no bottle left the operator can abort the process so that the operator can safely load new bottles in the bin.
 
-The system is using a pretrained AI YOLO model for detection of the bottles. The coordination of the operation is done by ROS 2 system. The data gathered data from the ROS 2 system and the IoT sensors is contained within a FIWARE system which provides a useful API for further analysis and visualization. For the visualization a dedicated fully customizable dashboard is developed.
+The system is using a pretrained AI model for detection of the bottles. The coordination of the operation is done by ROS 2 system. The data gathered data from the ROS 2 system and the IoT sensors is contained within a FIWARE system which provides a useful API for further analysis and visualization. For the visualization a dedicated fully customizable dashboard is developed.
 
 ## System Architecture
 
