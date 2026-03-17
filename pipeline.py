@@ -72,9 +72,13 @@ def detect_all_markers(frame):
     return corners, ids
 
 
+_last_valid_plane_markers = None
+
 def get_plane_markers(corners, ids):
+    global _last_valid_plane_markers
+
     if ids is None:
-        return None
+        return _last_valid_plane_markers
 
     ids = ids.flatten()
     pts = {}
@@ -86,9 +90,10 @@ def get_plane_markers(corners, ids):
             pts[id_] = center
 
     if len(pts) != 4:
-        return None
+        return _last_valid_plane_markers
 
     ordered = np.array([pts[i] for i in CORNER_MARKERS], dtype=np.float32)
+    _last_valid_plane_markers = ordered
     return ordered
 
 
