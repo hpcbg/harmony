@@ -33,9 +33,9 @@ fiware_to_ros:
     ros_msg_type: "std_msgs/String"
 
 ros_to_fiware:
-  - ros_topic: "/task_pack_bottle/status"
+  - ros_topic: "/system_skill_pick_and_place/status"
     ros_msg_type: "std_msgs/String"
-    fiware_entity: "task_pack_bottle"
+    fiware_entity: "system_skill_pick_and_place"
     fiware_entity_type: "Status"
     fiware_attribute: "status"
     ros_field: "data"
@@ -54,16 +54,9 @@ ros_to_fiware:
     fiware_attribute: "info"
     ros_field: "data"
 
-  - ros_topic: "/xarm_pack_bottle/robot_status"
+  - ros_topic: "/xarm_pick_and_place/robot_status"
     ros_msg_type: "std_msgs/String"
     fiware_entity: "xarm_robot"
     fiware_entity_type: "Status"
     fiware_attribute: "status"
-    ros_field: "data"
-
-  - ros_topic: "/filling_station/progress"
-    ros_msg_type: "std_msgs/Int32"
-    fiware_entity: "filling_station"
-    fiware_entity_type: "Int32"
-    fiware_attribute: "progress"
     ros_field: "data"
