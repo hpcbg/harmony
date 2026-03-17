@@ -574,11 +574,11 @@ class TaskPackBottleNode(Node):
         self.tree = py_trees.trees.BehaviourTree(root)
         self.tree.setup(node=self)
         # render the tree
-        py_trees.display.render_dot_tree(
-            root,
-            name='task_pack_bottle',
-            target_directory='../diagrams'
-        )
+        # py_trees.display.render_dot_tree(
+        #     root,
+        #     name='task_pack_bottle',
+        #     target_directory='../diagrams'
+        # )
         # py_trees.display.render_dot_tree(
         #     root,
         #     name='task_pack_bottle_with_bb',
