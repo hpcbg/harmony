@@ -81,6 +81,7 @@ Afer the dataset is generated you can train the model with `python train_bottle_
 
 After the training is complete the best model will be saved in the `checkpoints` folder.
 
+
 ### Inference test
 
 You can check the inference with the following scripts:
@@ -104,6 +105,8 @@ python detect_bottles.py --model checkpoints/best_model.pth --webcam
 ## Object Detection
 
 You need to configure the ArUco tag numbers, locations and the pick and place locations in the file `config/detect_obb.json`. You can use the `config/detect_obb.json.tpl` file for the first config file creation since the config file is not tracked by the repo.
+
+You can use the provided calibration sheet: [./A4_calibration_sheet.pdf](./A4_calibration_sheet.pdf). You need print it on A4 sheet and double check that the distances between the adjacent markers is 130 mm. Othewise you need to adjust the values in the configuration file. You must place the sheet in the view of the camera. The camera must on the right side of the sheet and the robot to be ot the top side ot the sheet. The XYZ axes of the robot must align with the arrows of the sheet. You need to place the robot gripper over the marker with ID 11 at the position (0, 0) and write down to the config the actual XY position and Z orientation of the robotic gripper in the `WORKAREA_POSE` field of the configuration file.
 
 
 ## REST API App for Bottle Detection
