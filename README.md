@@ -8,12 +8,12 @@ HTTPS is not provided, so it will not work if HTTPS is required by the browser. 
 
 ## Useful commands
 
-- Start: `docker-compose up -d`
-- Stop: `docker-compose down`
-- Restart: `docker-compose restart`
+- Start: `docker compose up -d`
+- Stop: `docker compose down`
+- Restart: `docker compose restart`
 - Check containers: `docker-compose ps
-- Logs: `docker-compose logs -f orion`
-- Remove and start over: `docker-compose down -v`
+- Logs: `docker compose logs -f orion`
+- Remove and start over: `docker compose down -v`
 - Get version: `curl http://192.168.X.X:1026/version`
 - Read value:
 ```
