@@ -34,7 +34,7 @@
       ]
     }
   ],
-  "widgetLibrary": [
+  "widgets": [
     {
       "id": "17654684344672b4g725px",
       "name": "Sensor",

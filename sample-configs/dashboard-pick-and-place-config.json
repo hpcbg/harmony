@@ -76,7 +76,7 @@
       ]
     }
   ],
-  "widgetLibrary": [
+  "widgets": [
     {
       "id": "1765720966379mt4rqi4bd",
       "name": "Camera Live Image",

@@ -1,104 +1,94 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
+import { useDispatch } from "react-redux";
 import API from "../services/api";
+import { setWidgetData, clearWidgetData } from "../store/widgetDataSlice";
 
-const useWidgetData = (widgets, isActive = true) => {
-  const [widgetData, setWidgetData] = useState({});
+const useWidgetData = (widgets, isActive) => {
+  const dispatch = useDispatch();
+
   const intervalsRef = useRef({});
-  const historyDataRef = useRef({}); // Store history data persistently
+  const historyRef = useRef({});
 
   useEffect(() => {
-    // Don't fetch data if widgets aren't active (not on current page)
-    if (!isActive || !widgets || widgets.length === 0) {
-      return;
-    }
+    if (!isActive || widgets.length === 0) return;
+
+    const validWidgets = widgets.filter((w) => w && w.id);
 
     const fetchWidgetData = async (widget) => {
-      // Skip button widgets as they don't fetch data
       if (widget.type === "button") return;
 
       try {
         const data = await API.get(widget.endpoint);
 
-        // Special handling for history widgets
+        // HISTORY widgets
         if (
           widget.type === "historyLineChart" ||
           widget.type === "historyBarChart"
         ) {
-          // Initialize history array if it doesn't exist
-          if (!historyDataRef.current[widget.id]) {
-            historyDataRef.current[widget.id] = [];
+          if (!historyRef.current[widget.id]) {
+            historyRef.current[widget.id] = [];
           }
 
-          // Get the new value from the response
-          const newValue =
-            data?.value !== undefined
-              ? data.value
-              : data?.values?.[0] !== undefined
-              ? data.values[0]
-              : null;
+          const newValue = data?.value ?? data?.values?.[0] ?? null;
 
           if (newValue !== null) {
-            // Add new value to history
-            historyDataRef.current[widget.id].push(newValue);
+            historyRef.current[widget.id].push(newValue);
 
-            // Keep only the last maxValues entries
-            const maxValues = widget.maxValues || 20;
-            if (historyDataRef.current[widget.id].length > maxValues) {
-              historyDataRef.current[widget.id] = historyDataRef.current[
-                widget.id
-              ].slice(-maxValues);
-            }
+            const max = widget.maxValues || 20;
+            historyRef.current[widget.id] =
+              historyRef.current[widget.id].slice(-max);
 
-            // Update widget data with accumulated history
-            setWidgetData((prev) => ({
-              ...prev,
-              [widget.id]: {
-                values: [...historyDataRef.current[widget.id]],
-              },
-            }));
+            dispatch(
+              setWidgetData({
+                widgetId: widget.id,
+                data: {
+                  values: [...historyRef.current[widget.id]],
+                },
+              }),
+            );
           }
         } else {
-          setWidgetData((prev) => ({ ...prev, [widget.id]: data }));
+          dispatch(
+            setWidgetData({
+              widgetId: widget.id,
+              data,
+            }),
+          );
         }
-      } catch (error) {
-        console.error(`Error fetching data for widget ${widget.id}:`, error);
+      } catch (err) {
+        console.error("Widget fetch error:", err);
       }
     };
 
-    // Clear existing intervals first
+    // Clear existing intervals
     Object.values(intervalsRef.current).forEach(clearInterval);
     intervalsRef.current = {};
 
-    widgets.forEach((widget) => {
-      // Initial fetch
+    validWidgets.forEach((widget) => {
       fetchWidgetData(widget);
-
-      // Set up interval for periodic updates
-      intervalsRef.current[widget.id] = setInterval(() => {
-        fetchWidgetData(widget);
-      }, widget.updateInterval);
+      intervalsRef.current[widget.id] = setInterval(
+        () => fetchWidgetData(widget),
+        widget.updateInterval,
+      );
     });
 
-    // Cleanup intervals on unmount or when widgets change
     return () => {
       Object.values(intervalsRef.current).forEach(clearInterval);
       intervalsRef.current = {};
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [widgets.map((w) => w.id).join(","), isActive]); // Only re-run when active state, widget count, or widget IDs change
+  }, [isActive, widgets.map((w) => w.id).join(",")]);
 
-  // Clear history when a widget is removed
+  // Cleanup removed widgets
   useEffect(() => {
-    const currentWidgetIds = new Set(widgets.map((w) => w.id));
+    const ids = new Set(widgets.map((w) => w.id));
 
-    // Remove history for widgets that no longer exist
-    Object.keys(historyDataRef.current).forEach((widgetId) => {
-      if (!currentWidgetIds.has(widgetId)) {
-        delete historyDataRef.current[widgetId];
+    Object.keys(historyRef.current).forEach((id) => {
+      if (!ids.has(id)) {
+        delete historyRef.current[id];
+        dispatch(clearWidgetData(id));
       }
     });
   }, [widgets]);
-  return widgetData;
 };
 
 export default useWidgetData;

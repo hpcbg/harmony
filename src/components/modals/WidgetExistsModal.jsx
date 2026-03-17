@@ -1,4 +1,4 @@
-const WidgetExistsModal = ({ isOpen, onClose }) => {
+export default function WidgetExistsModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
@@ -21,5 +21,4 @@ const WidgetExistsModal = ({ isOpen, onClose }) => {
       </div>
     </div>
   );
-};
-export default WidgetExistsModal;
+}
