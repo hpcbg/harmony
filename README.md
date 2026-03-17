@@ -20,3 +20,11 @@ npm run dev
 **NOTE:** This version uses vite which might not run on older vesion of Node. It is tested on Note v22.22.1.
 
 You can run it also with the script [./run.sh](./run.sh).
+
+## Deploy to Firebase Hosting
+
+```sh
+npm run build
+firebase login
+firebase deploy
+```
