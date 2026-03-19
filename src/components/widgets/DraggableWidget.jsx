@@ -13,9 +13,9 @@ import useConfirm from "../../hooks/useConfirm";
 import ConfirmModal from "../modals/ConfirmModal";
 
 export default function DraggableWidget({ widget, position }) {
-  const GRID_SIZE = 20;
+  const GRID_SIZE = 30;
 
-  const snapToGrid = (value) => Math.floor(value / GRID_SIZE) * GRID_SIZE;
+  const snapToGrid = (value) => Math.round(value / GRID_SIZE) * GRID_SIZE;
 
   const dispatch = useDispatch();
   const { currentPage, editMode } = useSelector(selectPages);
@@ -94,8 +94,8 @@ export default function DraggableWidget({ widget, position }) {
     e.preventDefault();
     setIsDragging(true);
     dragStartRef.current = {
-      mouseX: snapToGrid(e.clientX),
-      mouseY: snapToGrid(e.clientY),
+      mouseX: e.clientX,
+      mouseY: e.clientY,
       widgetX: position.x,
       widgetY: position.y,
     };
@@ -135,12 +135,12 @@ export default function DraggableWidget({ widget, position }) {
         let newY = dragStartRef.current.widgetY + deltaY;
 
         // Constrain to container bounds
-        newX = Math.max(0, Math.min(newX, containerBounds.width - widgetWidth));
-        newY = Math.max(
-          0,
-          Math.min(newY, containerBounds.height - widgetHeight),
+        newX = snapToGrid(
+          Math.max(0, Math.min(newX, containerBounds.width - widgetWidth)),
         );
-
+        newY = snapToGrid(
+          Math.max(0, Math.min(newY, containerBounds.height - widgetHeight)),
+        );
         dispatch(
           moveWidgetOnPage({
             pageId: currentPage,
@@ -212,70 +212,77 @@ export default function DraggableWidget({ widget, position }) {
 
   return (
     <div
-      ref={ref}
-      className={`absolute bg-white rounded-lg shadow-lg ${editMode ? (isDragging ? "cursor-grabbing" : "cursor-grab") : ""
-        }`}
       style={{
+        position: "absolute",
         left: position.x,
         top: position.y,
         width: position.width || 300,
         height: position.height || 200,
+        padding: "6px", // breathing room for the shadow
+        boxSizing: "border-box",
       }}
       onMouseDown={handleMouseDown}
     >
-      {editMode && (
-        <>
-          <div className="absolute top-2 left-2 text-gray-400">
-            <Menu size={16} />
-          </div>
+      <div
+        ref={ref}
+        className={`relative w-full h-full bg-white rounded-lg shadow-lg ${
+          editMode ? (isDragging ? "cursor-grabbing" : "cursor-grab") : ""
+        }`}
+      >
+        {editMode && (
+          <>
+            <div className="absolute top-2 left-2 text-gray-400">
+              <Menu size={16} />
+            </div>
 
-          <div className="widget-controls absolute top-2 right-2 flex gap-1 z-10">
-            <button
-              onClick={() => dispatch(startEditWidget(widget.id))}
-              className="p-1 text-blue-500 hover:text-blue-700 bg-white rounded"
+            <div className="widget-controls absolute top-2 right-2 flex gap-1 z-10">
+              <button
+                onClick={() => dispatch(startEditWidget(widget.id))}
+                className="p-1 text-blue-500 hover:text-blue-700 bg-white rounded"
+              >
+                <Edit size={16} />
+              </button>
+              <button
+                onClick={() => confirmRemoveWidget(widget.id)}
+                className="p-1 text-red-500 hover:text-red-700 bg-white rounded"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Resize handle */}
+            <div
+              className="resize-handle absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
+              onMouseDown={handleResizeMouseDown}
+              title="Resize widget"
             >
-              <Edit size={16} />
-            </button>
-            <button
-              onClick={() => confirmRemoveWidget(widget.id)}
-              className="p-1 text-red-500 hover:text-red-700 bg-white rounded"
-            >
-              <X size={16} />
-            </button>
-          </div>
+              <svg
+                className="absolute bottom-1 right-1 text-gray-400"
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+              >
+                <path
+                  d="M 10 2 L 2 10 M 10 6 L 6 10 M 10 10 L 10 10"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  fill="none"
+                />
+              </svg>
+            </div>
+          </>
+        )}
 
-          {/* Resize handle */}
-          <div
-            className="resize-handle absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
-            onMouseDown={handleResizeMouseDown}
-            title="Resize widget"
-          >
-            <svg
-              className="absolute bottom-1 right-1 text-gray-400"
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-            >
-              <path
-                d="M 10 2 L 2 10 M 10 6 L 6 10 M 10 10 L 10 10"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                fill="none"
-              />
-            </svg>
-          </div>
-        </>
-      )}
+        <ConfirmModal
+          isOpen={isOpen}
+          message="Are you sure you want to remove the widget from the page?"
+          onConfirm={handleConfirm}
+          onCancel={closeConfirm}
+        />
 
-      <ConfirmModal
-        isOpen={isOpen}
-        message="Are you sure you want to remove the widget from the page?"
-        onConfirm={handleConfirm}
-        onCancel={closeConfirm}
-      />
-
-      <div className="widget-content w-full h-full p-2">
-        <WidgetRenderer widget={widget} />
+        <div className="widget-content w-full h-full p-2">
+          <WidgetRenderer widget={widget} />
+        </div>
       </div>
     </div>
   );
