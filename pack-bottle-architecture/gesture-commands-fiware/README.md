@@ -1,6 +1,6 @@
 # Gesture Commands to FIWARE
 
-This repository contains a Python script which will recognize hand gestures commands and when a keyword is recognized it will be send to the FIWARE.
+This repository contains a Python script which will recognize hand gestures commands and when a command is recognized it will be send to the FIWARE.
 
 For the recognition the MediaPipe hand landmark model is used.
 
