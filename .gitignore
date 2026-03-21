@@ -6,6 +6,7 @@ db/*
 !db/.gitkeep
 ros2_ws/config/*
 !ros2_ws/config/*.tpl
+/ros2_ws/robot.urdf
 
 # Webots ROS 2
 src/webots_ros2
