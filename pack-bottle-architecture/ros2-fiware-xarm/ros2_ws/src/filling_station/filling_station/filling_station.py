@@ -34,7 +34,7 @@ class FillingStation(Node):
             cancel_callback=self.fill_cancel_cb
         )
 
-        self.timer = self.create_timer(1.0, self.main_loop)
+        self.timer = self.create_timer(0.5, self.main_loop)
 
     def fill_goal_cb(self, goal_request):
         if self.busy:
@@ -67,7 +67,7 @@ class FillingStation(Node):
         self.status_publisher.publish(msg)
 
         if self.progress + 10 >= 100:
-            time.sleep(3)
+            time.sleep(1)
 
         if self.progress < 100:
             self.progress = self.progress + 10
