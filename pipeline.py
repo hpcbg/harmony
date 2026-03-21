@@ -13,6 +13,7 @@ CONFIG = utils.json_config.load("config/detect_obb.json")
 
 coords_diff = (CONFIG['WORKAREA_POSE']['x'], CONFIG['WORKAREA_POSE']['y'])
 orientation_diff = CONFIG['WORKAREA_POSE']['orientation_degrees']
+pick_theta_offset = CONFIG['WORKAREA_POSE']['pick_theta_offset']
 pick_height = CONFIG['PICK_HEIGHT']
 
 MODEL_PATH = CONFIG['MODEL_PATH']
@@ -73,6 +74,7 @@ def detect_all_markers(frame):
 
 
 _last_valid_plane_markers = None
+
 
 def get_plane_markers(corners, ids):
     global _last_valid_plane_markers
@@ -141,11 +143,14 @@ def process_frame(frame):
         text = f'{class_name}: {score:.2f}'
 
         # Background for text
-        (text_width, text_height), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 1, 2)
-        cv2.rectangle(annotated, (x1, y1 - text_height - 4), (x1 + text_width, y1), color, -1)
+        (text_width, text_height), _ = cv2.getTextSize(
+            text, cv2.FONT_HERSHEY_SIMPLEX, 1, 2)
+        cv2.rectangle(annotated, (x1, y1 - text_height - 4),
+                      (x1 + text_width, y1), color, -1)
 
         # Text
-        cv2.putText(annotated, text, (x1, y1 - 2), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        cv2.putText(annotated, text, (x1, y1 - 2),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
     corners, ids = detect_all_markers(frame)
 
@@ -183,7 +188,8 @@ def process_frame(frame):
         cls_name = CLASS_NAMES.get(label, f'Class {label}')
 
         x, y = (x1 + x2) / 2, (y1 + y2) / 2
-        pts = np.array([[x1,y1],[x1,y2],[x2,y2],[x2,y1]]).astype(np.int32)
+        pts = np.array([[x1, y1], [x1, y2], [x2, y2], [x2, y1]]
+                       ).astype(np.int32)
 
         mask = np.zeros((img_h, img_w), dtype=np.uint8)
         cv2.fillPoly(mask, [pts], 255)
@@ -255,7 +261,7 @@ def process_frame(frame):
         theta_l = math.radians(orientation)
         x, y, theta = local_to_global_pose(
             x_l, y_l, theta_l, x0, y0, theta0)
-        theta = math.degrees(theta) + 90
+        theta = math.degrees(theta) + pick_theta_offset
 
         cv2.putText(frame, f"({x:.1f}, {y:.1f})",
                     (b["center"][0] + 5, b["center"][1] - 5),
@@ -297,7 +303,7 @@ def process_frame(frame):
                 "z": pick_height,
                 "roll_degrees": 0,
                 "pitch_degrees": 180,
-                "yaw_degrees": theta + 90
+                "yaw_degrees": theta + pick_theta_offset
             },
             "place_pose": {
                 "x": BOTTLE_STAND_POSE['x'],

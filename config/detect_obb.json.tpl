@@ -11,7 +11,8 @@
   "WORKAREA_POSE": {
     "x": 360,
     "y": 70,
-    "orientation_degrees": 0
+    "orientation_degrees": 0,
+    "pick_theta_offset": 0
   },
   "PICK_HEIGHT": 173,
   "BOTTLE_STAND_POSE": {
