@@ -40,11 +40,17 @@ The docker file for the FIWARE and more details can be found in the folder [fiwa
 
 ### 4. Hand Gesture Recognition
 
+Hand gestures commands are recognized and sent to the FIWARE. For the recognition the MediaPipe hand landmark model is used. The script can recognize the following gestures:
+
+- NO_HAND: when the hand is not present.
+- CAP_PLACED: when the bottle cap is placed on top of a bottle. Middle and index fingers are pointed downwards and the hand is stationary.
+- SIDE_GRIP: when the ottle is holded from the side. Middle and index fingers are pointed horizontally and the hand is stationary.
 
 More details can be found in the folder [gesture-commands-fiware](./gesture-commands-fiware/).
 
 ### 5. Voice Commands Recognition
 
+This module is listening to a list of predefined voice commands (keywords) and when a keyword is recognized it will be send to the FIWARE. For the speech recognition the Vosk models are used. The default set of keywords is GO, STOP, PICK, CAP and GIVE.
 
 More details can be found in the folder [voice-commands-fiware](./voice-commands-fiware/).
 
@@ -111,7 +117,9 @@ The voice commands require to say "GO" and then followed by the actual command "
 
 ## Video Demonstration
 
-The video demonstration will be uploaded soon.
+Demonstration of the execution of the pack bottle operation by an educational and research cobot is shown in the following video: [https://youtu.be/BlbIkUU0bRY](https://youtu.be/BlbIkUU0bRY).
+
+[![The Pack Bottle Task Executed by the Education Cobot](https://img.youtube.com/vi/BlbIkUU0bRY/2.jpg)](https://youtu.be/BlbIkUU0bRY)
 
 ## Licensing Information
 
