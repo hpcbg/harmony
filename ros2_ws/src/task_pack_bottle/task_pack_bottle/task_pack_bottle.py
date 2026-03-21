@@ -599,7 +599,7 @@ class TaskPackBottleNode(Node):
         self.blackboard.status = ""
 
         # tick_tree timer
-        self.timer = self.create_timer(1.0, self.tick_tree)
+        self.timer = self.create_timer(0.5, self.tick_tree)
 
     def tick_tree(self):
         self.tree.tick()
