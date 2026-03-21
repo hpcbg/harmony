@@ -1,6 +1,6 @@
-# ROS 2 and FIWARE integration for Bottle Pick and Place operation
+# ROS 2 and FIWARE integration for Bottle Pack operation
 
-This repository contains ROS 2 packages which allows integration of ROS 2 and FIWARE for execution of bottle detection and pick and place operation with the xArm7 robot.
+This repository contains ROS 2 packages which allows integration of ROS 2 and FIWARE for execution of bottle detection and bottle pack or bottle pick and place operation with the xArm7 robot.
 
 ## Instalation
 
@@ -32,6 +32,9 @@ The packages are as follows:
 - `task_pack_bottle`: provides the behavior tree for the complete pack bottle task. It waits user input from the start button and then proceeds with the bottle detection, grasping from the pick and moving to the place position, and the proceeds with the fill, cap and handover operations.
 - `utils_vendor`: this package provides utility python modules which are used by the other ROS 2 packages.
 - `xarm_pack_bottle`: this package contains the definitions of the movements for the various operations: pick, fill, cap, andover, etc. You need to set the robot and the motion parameters in the config file. You can look at the sample config file [./ros2_ws/src/xarm_pack_bottle/config/xarm_pack_bottle.json](./ros2_ws/src/xarm_pack_bottle/config/xarm_pack_bottle.json). The config file is a parameter to the ROS 2 node. You can execute the node with `ros2 run xarm_pack_bottle xarm_pack_bottle --ros-args -p config_path:=/path/to/my/config.json`. The launch file will require the config file with name `xarm_pack_bottle.json` to be placed in [./ros2_ws/config/](./ros2_ws/config/).
+- `edubot_pack_bottle`: this package contains an example of definitions of the movements for the various operations: pick, fill, cap, andover, etc, but for a different robot. This time no aditional configuration file is needed. This node should not be executed together with the `xarm_pack_bottle`. It is placed here for an illustration of how a different robot can be easily integrated into the system. [./ros2_ws/launch/edubot_complete.launch.py](./ros2_ws/launch/edubot_complete.launch.py) is a sample launch file. Demonstration of the execution of the pack bottle operation is shown in the following video: [https://youtu.be/BlbIkUU0bRY](https://youtu.be/BlbIkUU0bRY).
+
+[![The Pack Bottle Task Executed by the Education Cobot](https://img.youtube.com/vi/BlbIkUU0bRY/0.jpg)](https://youtu.be/BlbIkUU0bRY)
 
 ## Pick and Place Only Demo
 
