@@ -13,9 +13,9 @@ import useConfirm from "../../hooks/useConfirm";
 import ConfirmModal from "../modals/ConfirmModal";
 
 export default function DraggableWidget({ widget, position }) {
-  const GRID_SIZE = 20;
+  const GRID_SIZE = 10;
 
-  const snapToGrid = (value) => Math.floor(value / GRID_SIZE) * GRID_SIZE;
+  const snapToGrid = (value) => Math.round(value / GRID_SIZE) * GRID_SIZE;
 
   const dispatch = useDispatch();
   const { currentPage, editMode } = useSelector(selectPages);
@@ -94,8 +94,8 @@ export default function DraggableWidget({ widget, position }) {
     e.preventDefault();
     setIsDragging(true);
     dragStartRef.current = {
-      mouseX: snapToGrid(e.clientX),
-      mouseY: snapToGrid(e.clientY),
+      mouseX: e.clientX,
+      mouseY: e.clientY,
       widgetX: position.x,
       widgetY: position.y,
     };
@@ -135,12 +135,12 @@ export default function DraggableWidget({ widget, position }) {
         let newY = dragStartRef.current.widgetY + deltaY;
 
         // Constrain to container bounds
-        newX = Math.max(0, Math.min(newX, containerBounds.width - widgetWidth));
-        newY = Math.max(
-          0,
-          Math.min(newY, containerBounds.height - widgetHeight),
+        newX = snapToGrid(
+          Math.max(0, Math.min(newX, containerBounds.width - widgetWidth)),
         );
-
+        newY = snapToGrid(
+          Math.max(0, Math.min(newY, containerBounds.height - widgetHeight)),
+        );
         dispatch(
           moveWidgetOnPage({
             pageId: currentPage,
