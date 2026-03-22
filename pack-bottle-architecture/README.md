@@ -117,9 +117,9 @@ The voice commands require to say "GO" and then followed by the actual command "
 
 ## Video Demonstration
 
-Demonstration of the execution of the pack bottle operation by an educational and research cobot is shown in the following video: [https://youtu.be/BlbIkUU0bRY](https://youtu.be/BlbIkUU0bRY).
+Demonstration of the execution of the pack bottle operation by an educational and research cobot is shown in the following video: [https://youtu.be/xAtnlniCpGE](https://youtu.be/xAtnlniCpGE).
 
-[![The Pack Bottle Task Executed by the Education Cobot](https://img.youtube.com/vi/BlbIkUU0bRY/2.jpg)](https://youtu.be/BlbIkUU0bRY)
+[![The Pack Bottle Task Executed by the Education Cobot](https://img.youtube.com/vi/xAtnlniCpGE/2.jpg)](https://youtu.be/xAtnlniCpGE)
 
 ## Licensing Information
 
