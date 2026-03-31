@@ -132,7 +132,6 @@ class XArmPackBottle(Node):
             angle=self.CONFIG['HOME_POS_JOINTS_DEG'], wait=True)
         self.arm.set_gripper_position(
             self.CONFIG['GRIPPER_OPEN_POS'], wait=True)
-        time.sleep(3)
 
         self.send_move_feedback(goal_handle, "Pick: Approach pick position")
         self.move(pick_pose['x'], pick_pose['y'], self.CONFIG['APPROACH_HEIGHT_MM'],
@@ -142,11 +141,11 @@ class XArmPackBottle(Node):
         self.move(pick_pose['x'], pick_pose['y'], pick_pose['z'],
                   pick_pose['roll_degrees'], pick_pose['pitch_degrees'], pick_pose['yaw_degrees'])
 
-        time.sleep(2)
+        time.sleep(1)
         self.send_move_feedback(goal_handle, "Pick: Close gripper")
         self.arm.set_gripper_position(
             self.CONFIG['GRIPPER_CLOSE_POS'], wait=True)
-        time.sleep(2)
+        time.sleep(1)
 
         self.send_move_feedback(goal_handle, "Pick: Return to approach height")
         self.move(pick_pose['x'], pick_pose['y'], self.CONFIG['APPROACH_HEIGHT_MM'],
@@ -175,7 +174,7 @@ class XArmPackBottle(Node):
         self.send_move_feedback(goal_handle, "Pick: Open gripper")
         self.arm.set_gripper_position(
             self.CONFIG['GRIPPER_OPEN_POS'], wait=True)
-        time.sleep(2)
+        time.sleep(1)
 
         self.send_move_feedback(
             goal_handle, "Pick: Return to approach height")
@@ -205,11 +204,11 @@ class XArmPackBottle(Node):
                   self.CONFIG['BOTTOM_GRIP_PICK_RPY_DEG'][0], self.CONFIG['BOTTOM_GRIP_PICK_RPY_DEG'][1],
                   self.CONFIG['BOTTOM_GRIP_PICK_RPY_DEG'][2])
 
-        time.sleep(2)
+        time.sleep(1)
         self.send_move_feedback(goal_handle, "Pick: Close gripper")
         self.arm.set_gripper_position(
             self.CONFIG['GRIPPER_CLOSE_POS'], wait=True)
-        time.sleep(2)
+        time.sleep(1)
 
         self.send_move_feedback(
             goal_handle, "Pick: Return to approach height")
@@ -223,10 +222,7 @@ class XArmPackBottle(Node):
         self.arm.set_servo_angle(
             angle=self.CONFIG['BOTTOM_GRIP_MOVE_JOINTS_DEG'], wait=True)
 
-        time.sleep(3)
-
     def run_fill(self, goal_handle):
-
         self.send_move_feedback(
             goal_handle, "Fill: Move to fill approach position")
         self.arm.set_servo_angle(
@@ -235,8 +231,6 @@ class XArmPackBottle(Node):
         self.send_move_feedback(goal_handle, "Fill: Move to fill position")
         self.arm.set_servo_angle(
             angle=self.CONFIG['FILL_POS_JOINTS_DEG'], wait=True, speed=400, mvacc=200)
-
-        time.sleep(3)
 
     def run_move_to_cap(self, goal_handle):
         self.send_move_feedback(
@@ -255,28 +249,23 @@ class XArmPackBottle(Node):
         self.arm.set_servo_angle(
             servo_id=self.CONFIG['CAP_JOINT_ID'], angle=self.CONFIG['CAP_JOINT_MIN_MAX_DEG'][0], wait=True,  speed=900, mvacc=500)
 
-        time.sleep(3)
-
     def run_cap(self, goal_handle):
         self.send_move_feedback(
             goal_handle, "Cap: Set cap joint to max degree")
         self.arm.set_servo_angle(servo_id=self.CONFIG['CAP_JOINT_ID'],
                                  angle=self.CONFIG['CAP_JOINT_MIN_MAX_DEG'][1], speed=900, mvacc=700, wait=True)
 
-        time.sleep(3)
-
     def run_handover(self, goal_handle):
         self.send_move_feedback(goal_handle, "Handover: Open gripper")
         self.arm.set_gripper_position(
             self.CONFIG['GRIPPER_OPEN_POS'], wait=True)
-        time.sleep(5)
+        time.sleep(3)
 
         self.send_move_feedback(goal_handle, "Handover: Move to home")
         self.arm.set_servo_angle(
             angle=self.CONFIG['HOME_POS_JOINTS_DEG'], speed=400, mvacc=200, wait=True)
 
         self.send_move_feedback(goal_handle, "Handover: Completed")
-        time.sleep(3)
 
 
 def main(args=None):
