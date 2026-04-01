@@ -76,7 +76,7 @@ Before the first start of the system you need to create all of the configuration
 
 You will need to install the required Python packages and to build all of the ROS 2 packages. Please, make sure that PyTorch is installed and working correctly. You can check it with the following Jupyter Notebook: [./ai-bottle-detector/utils/bottle_detector.ipynb](./ai-bottle-detector/utils/bottle_detector.ipynb).
 
-After the system is configured, you can start it as follows.
+After the system is configured, you can start it as follows or you can use the [./launch_pack_bottle.sh](./launch_pack_bottle.sh) script.
 
 1. Start the FIWARE Docker container
    ```bash
@@ -116,6 +116,10 @@ Now, you can send the pack bottle request by pressing the blue button of the M5 
 The voice commands require to say "GO" and then followed by the actual command "PICK", "CAP", "GIVE" or "STOP".
 
 ## Video Demonstration
+
+Demonstration of the execution of the pack bottle operation with the xArm robot is shown in the following video: [https://youtu.be/xAtnlniCpGE](https://youtu.be/EWTFuBgDNAE).
+
+[![The Pack Bottle Task Executed by the xArm Robot](https://img.youtube.com/vi/EWTFuBgDNAE/0.jpg)](https://youtu.be/EWTFuBgDNAE)
 
 Demonstration of the execution of the pack bottle operation by an educational and research cobot is shown in the following video: [https://youtu.be/xAtnlniCpGE](https://youtu.be/xAtnlniCpGE).
 
