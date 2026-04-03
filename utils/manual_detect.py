@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
 
-# RTSP stream URL
-RTSP_URL = "rtsp://192.168.1.113:8554/mjpeg/1"
+# Camera ID or RTSP URL
+CAMERA = "rtsp://192.168.1.113:8554/mjpeg/1"
 
 # ArUco markers
 dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_ARUCO_ORIGINAL)
@@ -65,14 +65,14 @@ def get_plane_markers(corners, ids):
 def main():
     global H, clicked_global, clicked_point
 
-    cap = cv2.VideoCapture(RTSP_URL)
+    cap = cv2.VideoCapture(CAMERA)
 
     if not cap.isOpened():
-        print("Cannot open RTSP stream:", RTSP_URL)
+        print("Cannot open camera:", CAMERA)
         return
 
-    cv2.namedWindow("RTSP")
-    cv2.setMouseCallback("RTSP", mouse_callback)
+    cv2.namedWindow("Camera")
+    cv2.setMouseCallback("Camera", mouse_callback)
 
     while True:
         ret, frame = cap.read()
@@ -113,7 +113,7 @@ def main():
                         (0, 0, 255),
                         2)
 
-        cv2.imshow("RTSP", frame)
+        cv2.imshow("Camera", frame)
 
         if cv2.waitKey(1) & 0xFF == 27:
             break
