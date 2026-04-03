@@ -11,11 +11,6 @@ import utils.json_config
 
 CONFIG = utils.json_config.load("config/config.json")
 
-coords_diff = (CONFIG['WORKAREA_POSE']['x'], CONFIG['WORKAREA_POSE']['y'])
-orientation_diff = CONFIG['WORKAREA_POSE']['orientation_degrees']
-pick_theta_offset = CONFIG['WORKAREA_POSE']['pick_theta_offset']
-pick_height = CONFIG['PICK_HEIGHT']
-
 MODEL_PATH = CONFIG['MODEL_PATH']
 
 NUM_CLASSES = 3
@@ -44,8 +39,6 @@ detector = cv2.aruco.ArucoDetector(dictionary, parameters)
 # ArUco markers and correspondig points for plane definition
 CORNER_MARKERS = CONFIG['CORNER_MARKERS']
 PLANE_POINTS = np.array(CONFIG['CORNER_COORDINATES'], dtype=np.float32)
-
-BOTTLE_STAND_POSE = CONFIG['BOTTLE_STAND_POSE']
 
 NORMAL_BOTTLE = (0, 255, 0)
 NORMAL_CAP = (0, 0, 255)
@@ -255,13 +248,9 @@ def process_frame(frame):
         coords = b['coords']
         orientation = b['orientation']
 
-        x0, y0 = coords_diff[0], coords_diff[1]
-        theta0 = math.radians(orientation_diff)
-        x_l, y_l = coords[0], coords[1]
-        theta_l = math.radians(orientation)
-        x, y, theta = local_to_global_pose(
-            x_l, y_l, theta_l, x0, y0, theta0)
-        theta = math.degrees(theta) + pick_theta_offset
+        x, y = coords[0], coords[1]
+        theta = math.radians(orientation)
+        theta = math.degrees(theta)
 
         cv2.putText(frame, f"({x:.1f}, {y:.1f})",
                     (b["center"][0] + 5, b["center"][1] - 5),
@@ -289,17 +278,14 @@ def process_frame(frame):
     if selected_obj is not None:
 
         # Write pick and place command if the robot is available
-        x0, y0 = coords_diff[0], coords_diff[1]
-        theta0 = math.radians(orientation_diff)
-        x_l, y_l = float(selected_obj['coords'][0]), float(
+        x, y = float(selected_obj['coords'][0]), float(
             selected_obj['coords'][1])
-        theta_l = math.radians(float(selected_obj.get('orientation', 0)))
-        x, y, theta = local_to_global_pose(x_l, y_l, theta_l, x0, y0, theta0)
+        theta = math.radians(float(selected_obj.get('orientation', 0)))
         theta = math.degrees(theta)
         pick_pose = {
             "x": x,
             "y": y,
-            "rotation": theta + pick_theta_offset
+            "rotation": theta
         }
 
     return {

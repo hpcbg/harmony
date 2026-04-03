@@ -6,6 +6,10 @@ The used AI model for bottle detection is Fast R-CNN provided by PyTorch. The ca
 
 The repository contains the code needed for dataset generation and model training.
 
+This version works only with local coordinates. The robot controller (planner) is supposed account for the offset of the marker placed at position (0, 0).
+
+It has added support for FIWARE.
+
 ## Requirements
 
 The code is tested on Python 3.12. The packages contained in `requirements.txt` are required: `pip install -r requirements.txt`.
