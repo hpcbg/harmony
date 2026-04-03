@@ -9,14 +9,6 @@ from launch_ros.actions import Node
 def generate_launch_description():
     pkg_share = FindPackageShare('fiware_bridge').find('fiware_bridge')
 
-    bottle_detector_bridge = Node(
-        package='bottle_detector_bridge',
-        executable='bottle_detector_bridge',
-        parameters=[{
-                'config_path': './config/bottle_detector_bridge.json'
-        }]
-    )
-
     fiware_bridge = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
@@ -52,7 +44,6 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        bottle_detector_bridge,
         fiware_bridge,
         task_pack_bottle,
         xarm_pack_bottle,

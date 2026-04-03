@@ -13,7 +13,6 @@ find_package(geometry_msgs REQUIRED)
 find_package(action_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "action/DetectBottle.action"
   "action/PickAndPlace.action"
   "action/Move.action"
   "action/FillBottle.action"
