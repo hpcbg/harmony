@@ -140,6 +140,8 @@ class UserRequestsMonitor(py_trees.behaviour.Behaviour):
             stage = self.blackboard.stage
             if msg.data == "PICK" and stage == Stages.IDLE:
                 self._transition(Stages.ACTIVE, "User requested pick")
+            elif msg.data == "GIVE" and stage == Stages.MOVE_TO_FILL_READY:
+                self._transition(Stages.FILL_READY, "User completed fill")
             elif msg.data == "CAP" and stage == Stages.MOVE_TO_CAP_READY:
                 self._transition(Stages.CAP_REQUESTED, "User requested cap")
             elif msg.data == "GIVE" and stage == Stages.CAP_READY:
