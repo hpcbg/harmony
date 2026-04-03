@@ -61,8 +61,20 @@ class StageCheck(py_trees.behaviour.Behaviour):
         self.blackboard = py_trees.blackboard.Client(name=name)
         self.blackboard.register_key(
             key='stage', access=py_trees.common.Access.READ)
+        self.blackboard.register_key(
+            key='prev_stage', access=py_trees.common.Access.WRITE)
+
+    def setup(self, **kwargs):
+        self.node = kwargs['node']
+        self.stage_publisher = self.node.create_publisher(
+            String, '/task_pack_bottle/stage', 1)
 
     def update(self):
+        if self.blackboard.prev_stage != self.blackboard.stage:
+            msg = String()
+            msg.data = Stages(self.blackboard.stage).name
+            self.stage_publisher.publish(msg)
+            self.blackboard.prev_stage = self.blackboard.stage
         if self.blackboard.stage == self.stage:
             return py_trees.common.Status.SUCCESS
         return py_trees.common.Status.FAILURE
@@ -537,6 +549,11 @@ class TaskPackBottleNode(Node):
             access=py_trees.common.Access.WRITE
         )
         self.blackboard.stage = Stages.IDLE
+        self.blackboard.register_key(
+            key='prev_stage',
+            access=py_trees.common.Access.WRITE
+        )
+        self.blackboard.prev_stage = -1
         self.blackboard.register_key(
             key='status',
             access=py_trees.common.Access.WRITE

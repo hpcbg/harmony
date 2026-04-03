@@ -75,3 +75,10 @@ ros_to_fiware:
     fiware_entity_type: "Text"
     fiware_attribute: "command"
     ros_field: "data"
+
+  - ros_topic: "/task_pack_bottle/stage"
+    ros_msg_type: "std_msgs/String"
+    fiware_entity: "TaskPackBottle:operator-01"
+    fiware_entity_type: "TaskPackBottle"
+    fiware_attribute: "stage"
+    ros_field: "data"
