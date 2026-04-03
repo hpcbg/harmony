@@ -285,7 +285,7 @@ def process_frame(frame):
         cv2.drawContours(frame, [c["pts"]], -1, (0, 0, 255), 2)
         cv2.circle(frame, c["center"], 5, (0, 0, 255), -1)
 
-    pick_place = {}
+    pick_pose = {}
     if selected_obj is not None:
 
         # Write pick and place command if the robot is available
@@ -296,28 +296,15 @@ def process_frame(frame):
         theta_l = math.radians(float(selected_obj.get('orientation', 0)))
         x, y, theta = local_to_global_pose(x_l, y_l, theta_l, x0, y0, theta0)
         theta = math.degrees(theta)
-        pick_place = {
-            "pick_pose": {
-                "x": x,
-                "y": y,
-                "z": pick_height,
-                "roll_degrees": 0,
-                "pitch_degrees": 180,
-                "yaw_degrees": theta + pick_theta_offset
-            },
-            "place_pose": {
-                "x": BOTTLE_STAND_POSE['x'],
-                "y": BOTTLE_STAND_POSE['y'],
-                "z": BOTTLE_STAND_POSE['z'],
-                "roll_degrees": 57,
-                "pitch_degrees": -90,
-                "yaw_degrees": 32,
-            }
+        pick_pose = {
+            "x": x,
+            "y": y,
+            "rotation": theta + pick_theta_offset
         }
 
     return {
         "ai_processed_image": annotated,
         "processed_image": frame,
         "bottles": bottles_result,
-        "pick_and_place": pick_place
+        "pick_pose": pick_pose
     }

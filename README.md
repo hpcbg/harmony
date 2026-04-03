@@ -1,6 +1,6 @@
 # Bottle Detection
 
-This repository contains the complete algortihm for bottle detection.
+This repository contains the complete algorithm for bottle detection.
 
 The used AI model for bottle detection is Fast R-CNN provided by PyTorch. The camera which is used is M5Stack Timer Camera X with RTSP streaming firmware. Any other camera can also be used.
 
@@ -108,7 +108,6 @@ You need to configure the ArUco tag numbers, locations and the pick and place lo
 
 You can use the provided calibration sheet: [./A4_calibration_sheet.pdf](./A4_calibration_sheet.pdf). You need print it on A4 sheet and double check that the distances between the adjacent markers is 130 mm. Othewise you need to adjust the values in the configuration file. You must place the sheet in the view of the camera. The camera must on the right side of the sheet and the robot to be ot the top side ot the sheet. The XYZ axes of the robot must align with the arrows of the sheet. You need to place the robot gripper over the marker with ID 11 at the position (0, 0) and write down to the config the actual XY position and Z orientation of the robotic gripper in the `WORKAREA_POSE` field of the configuration file.
 
-
 ## REST API App for Bottle Detection
 
 This repository provides a REST API App for execution of bottle detection and pick and place coordinates generation.
@@ -124,6 +123,13 @@ After starting the app you can access the API documentation at the following URL
 The documentation will provide you with all the information about the API and the Swager UI will allow you test and experiment with the different queries.
 
 **IMPORTANT:** After boot up you need to perform the initial calibration by placing markers in the plane at the specified location and executing a single task. Afterwards, the markers positions will be cached and updated only if there are present again in the plane.
+
+## Bottle Detection from FIWARE
+
+Ypu can request a new bottle detection from the FIWARE with the following command:
+```bash
+curl -iX PATCH 'http://localhost:1026/v2/entities/BottleDetectionJob:processor-01/attrs'   -H 'Content-Type: application/json'   -H 'fiware-service: openiot'   -H 'fiware-servicepath: /'   -d '{"command": {"type": "Text", "value": "START"}}'
+```
 
 ## Other Utilities
 

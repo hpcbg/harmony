@@ -1,20 +1,30 @@
 from fastapi.responses import StreamingResponse
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from fastapi.responses import Response
 import uuid
 import time
 import cv2
+import logging
 
+import fiware
 from camera import Camera
 from pipeline import process_frame
 from jobs import Job, JobStatus, JobResult, JOBS
 import utils.json_config
 
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+
 CONFIG = utils.json_config.load("config/config.json")
 
 app = FastAPI(title="Bottle Perception API")
 
-camera = Camera(CONFIG["CAMERA"], CONFIG["SET_RESOLUTION"], CONFIG["WIDTH"], CONFIG["HEIGHT"])
+camera = Camera(CONFIG["CAMERA"], CONFIG["SET_RESOLUTION"],
+                CONFIG["WIDTH"], CONFIG["HEIGHT"])
+
+fiware.ensure_entity()
+fiware.ensure_command_subscription(CONFIG["APP_API_HOST"])
 
 
 def mjpeg_generator():
@@ -38,12 +48,14 @@ def run_job(job_id: str):
 
     try:
         job.status = JobStatus.CAPTURING
+        fiware.update_job_status(job_id, "CAPTURING")  # ← NEW
 
         frame = camera.get_frame()
         if frame is None:
             raise RuntimeError("No camera frame available")
 
         job.status = JobStatus.PROCESSING
+        fiware.update_job_status(job_id, "PROCESSING")  # ← NEW
         result = process_frame(frame.copy())
 
         job.result = JobResult(
@@ -51,22 +63,43 @@ def run_job(job_id: str):
             ai_processed_image=result["ai_processed_image"],
             processed_image=result["processed_image"],
             bottles=result["bottles"],
-            pick_and_place=result["pick_and_place"]
+            pick_pose=result["pick_pose"]
         )
 
         job.status = JobStatus.DONE
+        fiware.update_job_status(  # ← NEW
+            job_id, "DONE",
+            bottle_count=len(result["bottles"]),
+            pick_pose=result["pick_pose"]
+        )
 
     except Exception as e:
         job.status = JobStatus.FAILED
         job.error = str(e)
+        fiware.update_job_status(job_id, "FAILED", error=str(e))  # ← NEW
 
 
 @app.post("/api/v1/jobs")
 def create_job(background_tasks: BackgroundTasks):
     job_id = str(uuid.uuid4())
     JOBS[job_id] = Job(job_id, JobStatus.CREATED, time.time())
+    fiware.update_job_status(job_id, "CREATED")  # no more create_job_entity
     background_tasks.add_task(run_job, job_id)
     return {"job_id": job_id, "status": JobStatus.CREATED}
+
+
+@app.post("/api/v1/fiware/notify")
+async def fiware_notify(request: Request, background_tasks: BackgroundTasks):
+    body = await request.json()
+    print(body)
+    for entity in body.get("data", []):
+        command = entity.get("command", {}).get("value", "")
+        if command == "START":
+            result = create_job(background_tasks)
+            logger.info("FIWARE triggered new job: %s", result["job_id"])
+            fiware.reset_command()
+
+    return {"ok": True}
 
 
 @app.get("/api/v1/jobs/{job_id}/status")
@@ -87,7 +120,7 @@ def raw_image(job_id: str):
     return Response(img.tobytes(), media_type="image/jpeg")
 
 
-@app.get("/api/v1/jobs/{job_id}/image/ai_processed")
+@app.get("/api/v1/jobs/{job_id}/image/ai-processed")
 def processed_image(job_id: str):
     job = JOBS.get(job_id)
     if not job or not job.result:
@@ -115,12 +148,12 @@ def objects(job_id: str):
     return job.result.bottles
 
 
-@app.get("/api/v1/jobs/{job_id}/pick-place")
-def pick_place(job_id: str):
+@app.get("/api/v1/jobs/{job_id}/pick-pose")
+def pick_pose(job_id: str):
     job = JOBS.get(job_id)
     if not job or not job.result:
         raise HTTPException(404)
-    return job.result.pick_and_place
+    return job.result.pick_pose
 
 
 @app.get("/api/v1/camera/snapshot")

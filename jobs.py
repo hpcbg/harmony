@@ -16,7 +16,7 @@ class JobResult:
     ai_processed_image: any = None
     processed_image: any = None
     bottles: list = None
-    pick_and_place: dict = None
+    pick_pose: dict = None
 
 
 @dataclass
