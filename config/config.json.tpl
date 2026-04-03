@@ -1,5 +1,8 @@
 {
   "CAMERA": "rtsp://192.168.1.41:8554/mjpeg/1",
+  "SET_RESOLUTION": true,
+  "WIDTH": 1600,
+  "HEIGHT": 1200,
   "MODEL_PATH": "models/best_model.pth",
   "CORNER_MARKERS": [
     11,

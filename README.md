@@ -8,7 +8,7 @@ The repository contains the code needed for dataset generation and model trainin
 
 ## Requirements
 
-The code is tested on Python 3.12. The packages contained in `requirements.txt` are required. 
+The code is tested on Python 3.12. The packages contained in `requirements.txt` are required: `pip install -r requirements.txt`.
 
 Make sure that PyTorch is installed and can access the GPU correctly. You can check that everything work as expected with the Jupyter Notebook located in [./utils/bottle_detector.ipynb](./utils/bottle_detector.ipynb). You might also consider using CUDA for a faster computations.
 
@@ -29,7 +29,6 @@ python3.10 -m venv torch_venv
 source torch_venv/bin/activate
 pip install --upgrade pip
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-pip install opencv
 # Check the installation
 python -c "import torch; print(torch.cuda.is_available())"
 ```

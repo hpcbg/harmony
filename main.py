@@ -14,7 +14,7 @@ CONFIG = utils.json_config.load("config/config.json")
 
 app = FastAPI(title="Bottle Perception API")
 
-camera = Camera(CONFIG["CAMERA"])
+camera = Camera(CONFIG["CAMERA"], CONFIG["SET_RESOLUTION"], CONFIG["WIDTH"], CONFIG["HEIGHT"])
 
 
 def mjpeg_generator():

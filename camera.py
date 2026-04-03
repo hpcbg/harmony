@@ -4,8 +4,12 @@ import time
 
 
 class Camera:
-    def __init__(self, camera: str):
+    def __init__(self, camera: str, set_resolution=False, w=1600, h=1200):
         self.cap = cv2.VideoCapture(camera)
+        # Set resolution
+        if set_resolution:
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
         self.last_frame = None
         self.lock = threading.Lock()
         self.running = True
