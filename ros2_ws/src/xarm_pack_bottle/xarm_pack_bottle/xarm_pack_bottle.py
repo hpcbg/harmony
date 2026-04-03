@@ -125,7 +125,14 @@ class XArmPackBottle(Node):
 
     def run_pick(self, goal_handle):
         d = json.loads(goal_handle.request.pose_json)
-        pick_pose = d['pick_pose']
+        pick_pose = d
+        pick_pose['x'] = pick_pose['x'] + self.CONFIG['PICK_OFFSET_MM'][0]
+        pick_pose['y'] = pick_pose['y'] + self.CONFIG['PICK_OFFSET_MM'][1]
+        pick_pose['z'] = self.CONFIG['PICK_OFFSET_MM'][2]
+        pick_pose['roll_degrees'] = self.CONFIG['PICK_RPY_DEG'][0]
+        pick_pose['pitch_degrees'] = self.CONFIG['PICK_RPY_DEG'][1]
+        pick_pose['yaw_degrees'] = pick_pose['rotation'] + \
+            self.CONFIG['PICK_RPY_DEG'][2]
 
         self.send_move_feedback(goal_handle, "Pick: Move to home")
         self.arm.set_servo_angle(
@@ -193,7 +200,7 @@ class XArmPackBottle(Node):
         self.send_move_feedback(
             goal_handle, "Pick: Move to bottom grip approach height")
         self.move(self.CONFIG['BOTTOM_PICK_POS_MM'][0], self.CONFIG['BOTTOM_PICK_POS_MM'][1],
-                  self.CONFIG['APRROACH_HEIGHT_MM'],
+                  self.CONFIG['APPROACH_HEIGHT_MM'],
                   self.CONFIG['BOTTOM_GRIP_PICK_RPY_DEG'][0], self.CONFIG['BOTTOM_GRIP_PICK_RPY_DEG'][1],
                   self.CONFIG['BOTTOM_GRIP_PICK_RPY_DEG'][2])
 

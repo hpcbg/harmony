@@ -1,6 +1,16 @@
 {
-  "EMULATE_ROBOT": false,
+  "EMULATE_ROBOT": true,
   "ROBOT_IP": "192.168.1.231",
+  "PICK_OFFSET_MM": [
+    330,
+    0,
+    173
+  ],
+  "PICK_RPY_DEG": [
+    0,
+    180,
+    -90
+  ],
   "GRIPPER_OPEN_POS": 600,
   "GRIPPER_CLOSE_POS": 180,
   "HOME_POS_JOINTS_DEG": [
