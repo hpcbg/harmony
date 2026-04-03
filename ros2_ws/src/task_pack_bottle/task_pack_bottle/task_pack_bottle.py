@@ -201,29 +201,30 @@ class BottleDetectorStatus(py_trees.behaviour.Behaviour):
             access=py_trees.common.Access.WRITE
         )
         self.blackboard.register_key(
-            key='pick_and_place',
+            key='pick_pose',
             access=py_trees.common.Access.WRITE
         )
-        self.blackboard.pick_and_place = {}
+        self.blackboard.pick_pose = {}
 
     def setup(self, **kwargs):
         self.node = kwargs['node']
         self.subscriber = self.node.create_subscription(
-            String, '/bottle_detector_brigde/pick_and_place', self.callback, 1
+            String, '/bottle_detection/job_json', self.callback, 1
         )
 
     def callback(self, msg):
         if self.blackboard.stage != Stages.DETECT_EXECUTE:
             return
-        pick_place = json.loads(msg.data)
+        job = json.loads(msg.data)
 
-        if 'pick_pose' in pick_place:
-            self.blackboard.stage = Stages.DETECT_READY
-            self.blackboard.pick_and_place = pick_place
-            self.blackboard.status = "Bottle was detected"
-        else:
-            self.blackboard.stage = Stages.ACTIVE
-            self.blackboard.status = "Bottle was not detected!"
+        if "status" in job and job["status"] == "DONE":
+            if "x" in job["pick_pose"]:
+                self.blackboard.stage = Stages.DETECT_READY
+                self.blackboard.pick_pose = job["pick_pose"]
+                self.blackboard.status = "Bottle was detected"
+            else:
+                self.blackboard.stage = Stages.ACTIVE
+                self.blackboard.status = "Bottle was not detected!"
 
     def update(self):
         self.blackboard.status = "Waiting for a bottle to be detected..."
@@ -247,18 +248,15 @@ class RunBottleDetection(py_trees.behaviour.Behaviour):
 
     def setup(self, **kwargs):
         self.node = kwargs['node']
-        self.action_client = ActionClient(
-            self.node, DetectBottle, '/bottle_detector_bridge/detect_bottle')
+        self.run_command_publisher = self.node.create_publisher(
+            String, '/bottle_detection/command', 1)
 
     def update(self):
         self.blackboard.stage = Stages.DETECT_EXECUTE
-        if not self.action_client.wait_for_server(timeout_sec=2.0):
-            self.blackboard.status = "Bottle detection is unavailable!"
-            return py_trees.common.Status.FAILURE
-        goal_msg = DetectBottle.Goal()
-        goal_msg.run = True
+        msg = String()
+        msg.data = "START"
+        self.run_command_publisher.publish(msg)
         self.blackboard.status = "Detecting bottle..."
-        self.action_client.send_goal_async(goal_msg)
         return py_trees.common.Status.SUCCESS
 
 
@@ -369,10 +367,10 @@ def RunPickAsync(name): return RunActionAsync(
     '/xarm_pack_bottle/pick',
     goal(
         lambda bb: Move.Goal(
-            pose_json=json.dumps(bb.pick_and_place)
+            pose_json=json.dumps(bb.pick_pose)
         ),
         required_keys=[
-            ('pick_and_place', py_trees.common.Access.READ)
+            ('pick_pose', py_trees.common.Access.READ)
         ]
     ),
     Stages.PICK_EXECUTE,
