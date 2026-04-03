@@ -14,7 +14,6 @@ find_package(action_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "action/Move.action"
-  "action/FillBottle.action"
   DEPENDENCIES std_msgs geometry_msgs action_msgs
 )
 

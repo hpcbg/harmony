@@ -1,14 +1,12 @@
 import json
 
-import time
-
 import rclpy
 from rclpy.node import Node
 import py_trees
 
-from std_msgs.msg import Bool, String, Int32
+from std_msgs.msg import Bool, String
 
-from custom_interfaces.action import DetectBottle, Move, FillBottle
+from custom_interfaces.action import Move
 from rclpy.action import ActionClient
 from enum import IntEnum
 
@@ -23,16 +21,15 @@ class Stages(IntEnum):
     MOVE_TO_FILL_READY = 6
     START_FILL_EXECUTE = 7
     START_FILL_READY = 8
-    FILL_EXECUTE = 9
-    FILL_READY = 10
-    MOVE_TO_CAP_EXECUTE = 11
-    MOVE_TO_CAP_READY = 12
-    CAP_REQUESTED = 13
-    CAP_EXECUTE = 14
-    CAP_READY = 15
-    HANDOVER_REQUESTED = 16
-    HANDOVER_EXECUTE = 17
-    HANDOVER_READY = 18
+    FILL_READY = 9
+    MOVE_TO_CAP_EXECUTE = 10
+    MOVE_TO_CAP_READY = 11
+    CAP_REQUESTED = 12
+    CAP_EXECUTE = 13
+    CAP_READY = 14
+    HANDOVER_REQUESTED = 15
+    HANDOVER_EXECUTE = 16
+    HANDOVER_READY = 17
     IDLE = 100
 
 
@@ -94,31 +91,6 @@ class IdleStatus(py_trees.behaviour.Behaviour):
         return py_trees.common.Status.SUCCESS
 
 
-class FillingStationStatus(py_trees.behaviour.Behaviour):
-    def __init__(self, name):
-        super().__init__(name)
-        self.node = None
-        self.blackboard = py_trees.blackboard.Client(name=name)
-        self.blackboard.register_key(
-            key='fill_progress',
-            access=py_trees.common.Access.WRITE
-        )
-        self.blackboard.fill_progress = 0
-
-    def setup(self, **kwargs):
-        self.node = kwargs['node']
-        self.progress_subscriber = self.node.create_subscription(
-            Int32, '/filling_station/progress', self.progress_callback, 10
-        )
-
-    def progress_callback(self, msg):
-        data = msg.data
-        self.blackboard.fill_progress = data
-
-    def update(self):
-        return py_trees.common.Status.RUNNING
-
-
 class UserRequestsMonitor(py_trees.behaviour.Behaviour):
     def __init__(self, name):
         super().__init__(name)
@@ -151,6 +123,8 @@ class UserRequestsMonitor(py_trees.behaviour.Behaviour):
         stage = self.blackboard.stage
         if stage == Stages.IDLE:
             self._transition(Stages.ACTIVE, "User requested pick")
+        elif stage == Stages.MOVE_TO_FILL_READY:
+            self._transition(Stages.FILL_READY, "User completed fill")
         elif stage == Stages.MOVE_TO_CAP_READY:
             self._transition(Stages.CAP_REQUESTED, "User requested cap")
         elif stage == Stages.CAP_READY:
@@ -388,18 +362,6 @@ def RunGoToFillAsync(name): return RunActionAsync(
 )
 
 
-def RunSendFillActionAsync(name): return RunActionAsync(
-    name,
-    FillBottle,
-    '/filling_station/fill_bottle',
-    lambda _: FillBottle.Goal(
-        amount_json=json.dumps(100)
-    ),
-    Stages.START_FILL_EXECUTE,
-    Stages.START_FILL_READY
-)
-
-
 def RunGoToCapAsync(name): return RunActionAsync(
     name,
     Move,
@@ -434,26 +396,16 @@ class WaitFilling(py_trees.behaviour.Behaviour):
     def __init__(self, name):
         super().__init__(name)
         self.blackboard = py_trees.blackboard.Client(name=name)
-        self.blackboard.register_key(
-            key='fill_progress', access=py_trees.common.Access.READ)
-        self.blackboard.register_key(
-            key='stage',
-            access=py_trees.common.Access.WRITE
-        )
+
         self.blackboard.register_key(
             key='status',
             access=py_trees.common.Access.WRITE
         )
 
     def update(self):
-        if self.blackboard.fill_progress >= 100:
-            self.blackboard.stage = Stages.FILL_READY
-            return py_trees.common.Status.SUCCESS
-        else:
-            self.blackboard.status = f"Bottle is filling {self.blackboard.fill_progress}/100"
-            self.blackboard.stage = Stages.FILL_EXECUTE
+        self.blackboard.status = f"Fill: Waiting for a user confirmation..."
 
-            return py_trees.common.Status.RUNNING
+        return py_trees.common.Status.SUCCESS
 
 
 class CompletePackBottle(py_trees.behaviour.Behaviour):
@@ -493,7 +445,6 @@ class TaskPackBottleNode(Node):
             ReportStatus("Report Status"),
             BottleDetectorStatus("Bottle Detector Status"),
             UserRequestsMonitor("User Requests Monitor"),
-            FillingStationStatus("Filling Station Status")
         ])
 
         # --- workflow sequences ---
@@ -519,13 +470,8 @@ class TaskPackBottleNode(Node):
             RunGoToFillAsync("Move to Fill"))
 
         initiate_fill_seq = make_seq(
-            "Initiate Fill",
-            "At Fill?", Stages.MOVE_TO_FILL_READY,
-            RunSendFillActionAsync("Start Fill"))
-
-        wait_to_fill_seq = make_seq(
             "Fill",
-            "Fill Started?", Stages.START_FILL_READY,
+            "At Fill?", Stages.MOVE_TO_FILL_READY,
             WaitFilling("Wait Filling"))
 
         go_to_cap_seq = make_seq(
@@ -555,7 +501,6 @@ class TaskPackBottleNode(Node):
             pick_seq,
             go_to_fill_seq,
             initiate_fill_seq,
-            wait_to_fill_seq,
             go_to_cap_seq,
             cap_seq,
             handover_seq,

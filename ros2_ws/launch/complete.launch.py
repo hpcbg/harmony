@@ -37,15 +37,8 @@ def generate_launch_description():
         output='screen'
     )
 
-    filling_station = Node(
-        package='filling_station',
-        executable='filling_station',
-        output='screen'
-    )
-
     return LaunchDescription([
         fiware_bridge,
         task_pack_bottle,
-        xarm_pack_bottle,
-        filling_station
+        xarm_pack_bottle
     ])
