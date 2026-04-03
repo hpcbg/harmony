@@ -7,7 +7,7 @@ import yaml
 import os
 from importlib import import_module
 from ament_index_python.packages import get_package_share_directory
-from datetime import datetime, timezone
+import base64
 
 
 class ConfigurableFiwareBridge(Node):
@@ -62,7 +62,8 @@ class ConfigurableFiwareBridge(Node):
         self.setup_fiware_to_ros_bridges()
 
         polling_interval = self.config.get('polling_interval', 1.0)
-        self.timer = self.create_timer(polling_interval, self.poll_fiware_entities)
+        self.timer = self.create_timer(
+            polling_interval, self.poll_fiware_entities)
 
         self.get_logger().info('Configurable FIWARE Bridge started!')
         self.get_logger().info(f'Loaded config from: {config_file}')
@@ -100,7 +101,8 @@ class ConfigurableFiwareBridge(Node):
                 self.get_logger().info(
                     f'  {mapping["ros_topic"]} → {entity}.{mapping["fiware_attribute"]}')
             else:
-                attrs = [a['name'] for a in mapping.get('fiware_attributes', [])]
+                attrs = [a['name']
+                         for a in mapping.get('fiware_attributes', [])]
                 self.get_logger().info(
                     f'  {mapping["ros_topic"]} → {entity}.[{", ".join(attrs)}]')
 
@@ -130,7 +132,8 @@ class ConfigurableFiwareBridge(Node):
                     'msg_class': msg_class,
                     'mapping': mapping
                 }
-                self.get_logger().info(f'Created publisher: {topic} ({msg_type})')
+                self.get_logger().info(
+                    f'Created publisher: {topic} ({msg_type})')
 
     def setup_ros_to_fiware_bridges(self):
         for mapping in self.config.get('ros_to_fiware', []):
@@ -139,12 +142,14 @@ class ConfigurableFiwareBridge(Node):
             msg_class = self.get_message_class(msg_type)
             if msg_class:
                 callback = self.create_ros_callback(mapping)
-                subscriber = self.create_subscription(msg_class, topic, callback, 10)
+                subscriber = self.create_subscription(
+                    msg_class, topic, callback, 10)
                 self.ros_subscribers[topic] = {
                     'subscriber': subscriber,
                     'mapping': mapping
                 }
-                self.get_logger().info(f'Created subscriber: {topic} ({msg_type})')
+                self.get_logger().info(
+                    f'Created subscriber: {topic} ({msg_type})')
                 self.initialize_fiware_entity(mapping)
 
     def create_ros_callback(self, mapping):
@@ -163,23 +168,27 @@ class ConfigurableFiwareBridge(Node):
                 entity = {"id": entity_id, "type": entity_type}
 
                 if 'fiware_attribute' in mapping:
-                    entity[mapping['fiware_attribute']] = {"type": "Text", "value": ""}
+                    entity[mapping['fiware_attribute']] = {
+                        "type": "Text", "value": ""}
                 elif 'fiware_attributes' in mapping:
                     for attr in mapping['fiware_attributes']:
                         entity[attr['name']] = {"type": "Number", "value": 0.0}
 
                 create_url = f"{self.orion_url}/entities"
-                response = requests.post(create_url, json=entity, headers=self.fiware_headers)
+                response = requests.post(
+                    create_url, json=entity, headers=self.fiware_headers)
 
                 if response.status_code == 201:
-                    self.get_logger().info(f'Created FIWARE entity: {entity_id}')
+                    self.get_logger().info(
+                        f'Created FIWARE entity: {entity_id}')
                 else:
                     self.get_logger().error(
                         f'Failed to create entity {entity_id}: {response.text}')
             else:
                 self.get_logger().info(f'FIWARE entity exists: {entity_id}')
         except Exception as e:
-            self.get_logger().error(f'Error initializing entity {entity_id}: {str(e)}')
+            self.get_logger().error(
+                f'Error initializing entity {entity_id}: {str(e)}')
 
     # ------------------------------------------------------------------ #
     #  Timestamp-aware polling                                             #
@@ -195,7 +204,7 @@ class ConfigurableFiwareBridge(Node):
 
     def poll_fiware_entities(self):
         for topic, pub_info in self.ros_publishers.items():
-            mapping  = pub_info['mapping']
+            mapping = pub_info['mapping']
             entity_id = mapping['fiware_entity']
             attribute = mapping['fiware_attribute']
 
@@ -212,9 +221,9 @@ class ConfigurableFiwareBridge(Node):
                         f'Unexpected status {response.status_code} for {entity_id}')
                     continue
 
-                data      = response.json()
+                data = response.json()
                 attr_data = data.get(attribute, {})
-                value     = attr_data.get('value')
+                value = attr_data.get('value')
 
                 if value is None:
                     continue
@@ -240,6 +249,12 @@ class ConfigurableFiwareBridge(Node):
 
                 if 'value_mapping' in mapping:
                     value = mapping['value_mapping'].get(str(value), value)
+
+                # Check if base64 decoding is needed
+                if mapping.get('decode_base64', False) and isinstance(value, str):
+                    self.get_logger().info(
+                        f"Decoding base64 for {mapping['fiware_attribute']}")
+                    value = self.safe_base64_decode(value)
 
                 msg = self.create_ros_message(pub_info['msg_class'], value)
                 if msg:
@@ -289,7 +304,8 @@ class ConfigurableFiwareBridge(Node):
                         "value": float(value) if value is not None else 0.0
                     }
 
-            response = requests.patch(url, json=payload, headers=self.fiware_headers)
+            response = requests.patch(
+                url, json=payload, headers=self.fiware_headers)
 
             if response.status_code == 204:
                 self.get_logger().debug(
@@ -311,6 +327,17 @@ class ConfigurableFiwareBridge(Node):
             self.get_logger().error(
                 f'Error getting attribute {attr_path}: {str(e)}')
             return None
+
+    def safe_base64_decode(self, encoded_val):
+        try:
+            # Fix padding if needed
+            missing_padding = len(encoded_val) % 4
+            if missing_padding:
+                encoded_val += '=' * (4 - missing_padding)
+            return base64.b64decode(encoded_val).decode('utf-8')
+        except Exception as e:
+            self.get_logger().error(f"Base64 decode error: {e}")
+            return encoded_val
 
 
 def main(args=None):
