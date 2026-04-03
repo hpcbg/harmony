@@ -4,8 +4,8 @@ import time
 
 
 class Camera:
-    def __init__(self, rtsp_url: str):
-        self.cap = cv2.VideoCapture(rtsp_url)
+    def __init__(self, camera: str):
+        self.cap = cv2.VideoCapture(camera)
         self.last_frame = None
         self.lock = threading.Lock()
         self.running = True

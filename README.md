@@ -29,6 +29,7 @@ python3.10 -m venv torch_venv
 source torch_venv/bin/activate
 pip install --upgrade pip
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip install opencv
 # Check the installation
 python -c "import torch; print(torch.cuda.is_available())"
 ```

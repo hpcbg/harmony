@@ -14,7 +14,7 @@ CONFIG = utils.json_config.load("config/config.json")
 
 app = FastAPI(title="Bottle Perception API")
 
-camera = Camera(CONFIG["RTSP_URL"])
+camera = Camera(CONFIG["CAMERA"])
 
 
 def mjpeg_generator():

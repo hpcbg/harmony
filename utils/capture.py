@@ -7,15 +7,15 @@ import json_config
 
 CONFIG = json_config.load("../config/config.json")
 
-RTSP_URL = CONFIG['RTSP_URL']
+CAMERA = CONFIG['CAMERA']
 OUTPUT_DIR = "captured"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-cap = cv2.VideoCapture(RTSP_URL)
+cap = cv2.VideoCapture(CAMERA)
 
 if not cap.isOpened():
-    print("Error: Cannot open RTSP stream.")
+    print("Error: Cannot open camera.")
     exit()
 
 print("Press SPACE to save image, ESC to exit.")
@@ -26,7 +26,7 @@ while True:
         print("Stream error.")
         break
 
-    cv2.imshow("RTSP Capture", cv2.resize(frame, (800, 600)))
+    cv2.imshow("Camera", cv2.resize(frame, (800, 600)))
     key = cv2.waitKey(1)
 
     if key == 27:  # ESC

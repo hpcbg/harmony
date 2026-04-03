@@ -1,5 +1,5 @@
 {
-  "RTSP_URL": "rtsp://192.168.1.41:8554/mjpeg/1",
+  "CAMERA": "rtsp://192.168.1.41:8554/mjpeg/1",
   "MODEL_PATH": "models/best_model.pth",
   "CORNER_MARKERS": [
     11,
