@@ -13,7 +13,7 @@ class JobStatus(str, Enum):
 @dataclass
 class JobResult:
     raw_image: any = None
-    yolo_processed_image: any = None
+    ai_processed_image: any = None
     processed_image: any = None
     bottles: list = None
     pick_and_place: dict = None

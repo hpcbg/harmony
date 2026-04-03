@@ -9,7 +9,7 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 import utils.json_config
 
-CONFIG = utils.json_config.load("config/detect_obb.json")
+CONFIG = utils.json_config.load("config/config.json")
 
 coords_diff = (CONFIG['WORKAREA_POSE']['x'], CONFIG['WORKAREA_POSE']['y'])
 orientation_diff = CONFIG['WORKAREA_POSE']['orientation_degrees']
@@ -316,7 +316,7 @@ def process_frame(frame):
         }
 
     return {
-        "yolo_processed_image": annotated,
+        "ai_processed_image": annotated,
         "processed_image": frame,
         "bottles": bottles_result,
         "pick_and_place": pick_place

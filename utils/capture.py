@@ -5,7 +5,7 @@ import uuid
 import json_config
 
 
-CONFIG = json_config.load("../config/detect_obb.json")
+CONFIG = json_config.load("../config/config.json")
 
 RTSP_URL = CONFIG['RTSP_URL']
 OUTPUT_DIR = "captured"

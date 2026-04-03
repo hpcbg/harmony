@@ -13,7 +13,7 @@ models/*
 !models/.gitkeep
 !models/best.pt
 runs
-config/detect_obb.json
+config/config.json
 test_annotations.json
 train_annotations.json
 val_annotations.json

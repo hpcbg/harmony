@@ -10,7 +10,7 @@ from pipeline import process_frame
 from jobs import Job, JobStatus, JobResult, JOBS
 import utils.json_config
 
-CONFIG = utils.json_config.load("config/detect_obb.json")
+CONFIG = utils.json_config.load("config/config.json")
 
 app = FastAPI(title="Bottle Perception API")
 
@@ -48,7 +48,7 @@ def run_job(job_id: str):
 
         job.result = JobResult(
             raw_image=frame,
-            yolo_processed_image=result["yolo_processed_image"],
+            ai_processed_image=result["ai_processed_image"],
             processed_image=result["processed_image"],
             bottles=result["bottles"],
             pick_and_place=result["pick_and_place"]
@@ -87,13 +87,13 @@ def raw_image(job_id: str):
     return Response(img.tobytes(), media_type="image/jpeg")
 
 
-@app.get("/api/v1/jobs/{job_id}/image/yolo_processed")
+@app.get("/api/v1/jobs/{job_id}/image/ai_processed")
 def processed_image(job_id: str):
     job = JOBS.get(job_id)
     if not job or not job.result:
         raise HTTPException(404)
 
-    _, img = cv2.imencode(".jpg", job.result.yolo_processed_image)
+    _, img = cv2.imencode(".jpg", job.result.ai_processed_image)
     return Response(img.tobytes(), media_type="image/jpeg")
 
 

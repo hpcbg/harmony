@@ -24,9 +24,9 @@ sudo apt update
 # Install Python 3.10
 sudo apt install python3.10 python3.10-venv python3.10-dev
 # Create a new virtual environment
-python3.10 -m venv torch_env
+python3.10 -m venv torch_venv
 # Install torch
-source torch_env/bin/activate
+source torch_venv/bin/activate
 pip install --upgrade pip
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 # Check the installation
@@ -35,7 +35,7 @@ python -c "import torch; print(torch.cuda.is_available())"
 
 ## Dataset Generation
 
-The script in `utils/capture.py` will allow you to easily capture multiple images which will then be used for the dataset. You need to configure the URL of the RTSP Stream in the file `config/detect_obb.json`. You can use the `config/detect_obb.json.tpl` file for the first config file creation since the config file is not tracked by the repo.
+The script in `utils/capture.py` will allow you to easily capture multiple images which will then be used for the dataset. You need to configure the camera ID or the URL of the RTSP Stream in the file `config/config.json`. You can use the `config/config.json.tpl` file for the first config file creation since the config file is not tracked by the repo.
 
 After you capture the images you need to place them in the following dataset structure:
 
@@ -104,7 +104,7 @@ python detect_bottles.py --model checkpoints/best_model.pth --webcam
 
 ## Object Detection
 
-You need to configure the ArUco tag numbers, locations and the pick and place locations in the file `config/detect_obb.json`. You can use the `config/detect_obb.json.tpl` file for the first config file creation since the config file is not tracked by the repo.
+You need to configure the ArUco tag numbers, locations and the pick and place locations in the file `config/config.json`. You can use the `config/config.json.tpl` file for the first config file creation since the config file is not tracked by the repo.
 
 You can use the provided calibration sheet: [./A4_calibration_sheet.pdf](./A4_calibration_sheet.pdf). You need print it on A4 sheet and double check that the distances between the adjacent markers is 130 mm. Othewise you need to adjust the values in the configuration file. You must place the sheet in the view of the camera. The camera must on the right side of the sheet and the robot to be ot the top side ot the sheet. The XYZ axes of the robot must align with the arrows of the sheet. You need to place the robot gripper over the marker with ID 11 at the position (0, 0) and write down to the config the actual XY position and Z orientation of the robotic gripper in the `WORKAREA_POSE` field of the configuration file.
 
