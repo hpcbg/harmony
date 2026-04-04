@@ -1,0 +1,141 @@
+services:
+  # 1. Orion Context Broker
+  orion:
+    image: fiware/orion:3.10.1
+    hostname: orion
+    container_name: fiware-orion
+    depends_on:
+      - mongo
+    networks:
+      - fiware_net
+    ports:
+      - "1026:1026"
+    command: -dbhost mongo -corsOrigin __ALL -corsMaxAge 86400
+
+  # 2. MongoDB
+  mongo:
+    image: mongo:4.4
+    hostname: mongo
+    container_name: mongo
+    networks:
+      - fiware_net
+    volumes:
+      - mongo_data:/data/db
+
+  # 3. CrateDB
+  crate:
+    image: crate:5.3
+    hostname: crate
+    container_name: cratedb
+    networks:
+      - fiware_net
+    ports:
+      - "4200:4200" # GUI
+      - "5432:5432" # PostgreSQL interface for Grafana
+    environment:
+      - CRATE_HEAP_SIZE=1g
+    command: >
+      crate -Cauth.host_based.enabled=false
+      -Ccluster.name=democluster
+      -Chttp.cors.enabled=true
+      -Chttp.cors.allow-origin="*"
+      -Cpath.repo=/backups
+    volumes:
+      - crate_data:/data
+      - ./backups:/backups
+
+  # 4. QuantumLeap
+  quantumleap:
+    image: orchestracities/quantumleap:0.8.1
+    hostname: quantumleap
+    container_name: fiware-quantumleap
+    depends_on:
+      - orion
+      - crate
+    networks:
+      - fiware_net
+    ports:
+      - "8668:8668"
+    environment:
+      - CRATE_HOST=crate
+
+  # 5. Grafana
+  grafana:
+    image: grafana/grafana:latest
+    hostname: grafana
+    container_name: grafana
+    depends_on:
+      - crate
+    networks:
+      - fiware_net
+    ports:
+      - "4000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./dashboards:/etc/grafana/provisioning/dashboards/json_files
+
+  # 6. Orion subscriptions
+  fiware-setup:
+    image: curlimages/curl:latest
+    container_name: fiware-setup
+    depends_on:
+      - orion
+      - quantumleap
+    networks:
+      - fiware_net
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "sleep 20 &&
+      curl -iX POST 'http://orion:1026/v2/subscriptions' \
+      -H 'Content-Type: application/json' \
+      -H 'fiware-service: openiot' \
+      -H 'fiware-servicepath: /' \
+      -d '{
+        \"description\": \"Notify QuantumLeap\",
+        \"subject\": { \"entities\": [{\"idPattern\": \".*\", \"type\": \"SensorDevice\"}] },
+        \"notification\": {
+          \"http\": { \"url\": \"http://quantumleap:8668/v2/notify\" },
+          \"attrs\": [ \"buttonBlue\", \"buttonRed\" ],
+          \"metadata\": [\"dateModified\"]
+        }
+      }' &&
+      curl -iX POST 'http://orion:1026/v2/subscriptions' \
+      -H 'Content-Type: application/json' \
+      -H 'fiware-service: openiot' \
+      -H 'fiware-servicepath: /' \
+      -d '{
+        \"description\": \"Notify QuantumLeap - BottleDetectionJob\",
+        \"subject\": { \"entities\": [{\"idPattern\": \".*\", \"type\": \"BottleDetectionJob\"}] },
+        \"notification\": {
+          \"http\": { \"url\": \"http://quantumleap:8668/v2/notify\" },
+          \"attrs\": [ \"jobId\", \"status\", \"bottleCount\", \"pickX\", \"pickY\", \"pickRotation\", \"error\" ],
+          \"metadata\": [\"dateModified\"]
+        }
+      }' &&
+      curl -iX POST 'http://orion:1026/v2/subscriptions' \
+      -H 'Content-Type: application/json' \
+      -H 'fiware-service: openiot' \
+      -H 'fiware-servicepath: /' \
+      -d '{
+        \"description\": \"Notify QuantumLeap - Task Pack Bottle\",
+        \"subject\": { \"entities\": [{\"id\": \"TaskPackBottle:operator-01\", \"type\": \"TaskPackBottle\"}] },
+        \"notification\": {
+          \"http\": { \"url\": \"http://quantumleap:8668/v2/notify\" },
+          \"attrs\": [ \"stage\" ],
+          \"metadata\": [\"dateModified\"]
+        }
+      }'"
+
+networks:
+  fiware_net:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  crate_data:
+  grafana_data:
