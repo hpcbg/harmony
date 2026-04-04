@@ -252,13 +252,13 @@ class XArmPackBottle(Node):
                   self.CONFIG['BOTTOM_GRIP_MOVE_RPY_DEG'][2])
 
         self.send_move_feedback(
-            goal_handle, "Cap: Set cap joint to min degree")
+            goal_handle, "Cap: Set cap joint to min position")
         self.arm.set_servo_angle(
             servo_id=self.CONFIG['CAP_JOINT_ID'], angle=self.CONFIG['CAP_JOINT_MIN_MAX_DEG'][0], wait=True,  speed=900, mvacc=500)
 
     def run_cap(self, goal_handle):
         self.send_move_feedback(
-            goal_handle, "Cap: Set cap joint to max degree")
+            goal_handle, "Cap: Set cap joint to max position")
         self.arm.set_servo_angle(servo_id=self.CONFIG['CAP_JOINT_ID'],
                                  angle=self.CONFIG['CAP_JOINT_MIN_MAX_DEG'][1], speed=900, mvacc=700, wait=True)
 
