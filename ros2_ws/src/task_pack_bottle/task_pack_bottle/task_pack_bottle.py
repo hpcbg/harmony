@@ -30,6 +30,7 @@ class Stages(IntEnum):
     HANDOVER_REQUESTED = 15
     HANDOVER_EXECUTE = 16
     HANDOVER_READY = 17
+    STOP = 99
     IDLE = 100
 
 
@@ -145,7 +146,7 @@ class UserRequestsMonitor(py_trees.behaviour.Behaviour):
 
     def stop_button_callback(self, msg):
         if msg.data and self.blackboard.stage != Stages.IDLE:
-            self._transition(Stages.IDLE, "User aborted the task")
+            self._transition(Stages.STOP, "User aborted the task")
 
     def voice_command_callback(self, msg):
         if self.prev_voice_command == "GO":
@@ -441,6 +442,25 @@ class CompletePackBottle(py_trees.behaviour.Behaviour):
         return py_trees.common.Status.SUCCESS
 
 
+class Stop(py_trees.behaviour.Behaviour):
+    def __init__(self, name):
+        super().__init__(name)
+        self.blackboard = py_trees.blackboard.Client(name=name)
+        self.blackboard.register_key(
+            key='stage',
+            access=py_trees.common.Access.WRITE
+        )
+        self.blackboard.register_key(
+            key='status',
+            access=py_trees.common.Access.WRITE
+        )
+
+    def update(self):
+        self.blackboard.stage = Stages.IDLE
+        self.blackboard.status = "Emergency Stop: Completed"
+        return py_trees.common.Status.SUCCESS
+
+
 class TaskPackBottleNode(Node):
     def __init__(self):
         super().__init__('task_pack_bottle')
@@ -467,6 +487,11 @@ class TaskPackBottleNode(Node):
             seq.add_children(
                 [StageCheck(precondition_name, precondition_stage), behaviour])
             return seq
+
+        stop_monitor = make_seq(
+            "Stop Monitor",
+            "Stop Requested?", Stages.STOP,
+            Stop("Stop"))
 
         detect_seq = make_seq(
             "Detect",
@@ -524,6 +549,7 @@ class TaskPackBottleNode(Node):
 
         root.add_children([
             system_monitor,
+            stop_monitor,
             workflow_seq
         ])
 
