@@ -19,17 +19,15 @@ class Stages(IntEnum):
     PICK_READY = 4
     MOVE_TO_FILL_EXECUTE = 5
     MOVE_TO_FILL_READY = 6
-    START_FILL_EXECUTE = 7
-    START_FILL_READY = 8
-    FILL_READY = 9
-    MOVE_TO_CAP_EXECUTE = 10
-    MOVE_TO_CAP_READY = 11
-    CAP_REQUESTED = 12
-    CAP_EXECUTE = 13
-    CAP_READY = 14
-    HANDOVER_REQUESTED = 15
-    HANDOVER_EXECUTE = 16
-    HANDOVER_READY = 17
+    FILL_READY = 7
+    MOVE_TO_CAP_EXECUTE = 8
+    MOVE_TO_CAP_READY = 9
+    CAP_REQUESTED = 10
+    CAP_EXECUTE = 11
+    CAP_READY = 12
+    HANDOVER_REQUESTED = 13
+    HANDOVER_EXECUTE = 14
+    HANDOVER_READY = 15
     STOP = 99
     IDLE = 100
 
@@ -95,12 +93,14 @@ class IdleStatus(py_trees.behaviour.Behaviour):
         )
 
     def update(self):
-        if self.blackboard.stage == Stages.MOVE_TO_CAP_READY:
-            self.blackboard.status = f"Cap: Waiting for a user request..."
+        if self.blackboard.stage == Stages.IDLE:
+            self.blackboard.status = "Idle: Waiting for a user request..."
+        elif self.blackboard.stage == Stages.MOVE_TO_FILL_READY:
+            self.blackboard.status = "Fill: Waiting for a user confirmation..."
+        elif self.blackboard.stage == Stages.MOVE_TO_CAP_READY:
+            self.blackboard.status = "Cap: Waiting for a user request..."
         elif self.blackboard.stage == Stages.CAP_READY:
-            self.blackboard.status = f"Handover: Waiting for a user request..."
-        else:
-            self.blackboard.status = f"Waiting for a user request..."
+            self.blackboard.status = "Handover: Waiting for a user request..."
         return py_trees.common.Status.SUCCESS
 
 
@@ -418,7 +418,7 @@ class WaitFilling(py_trees.behaviour.Behaviour):
         )
 
     def update(self):
-        self.blackboard.status = f"Fill: Waiting for a user confirmation..."
+        self.blackboard.status = "Fill: Waiting for a user confirmation..."
 
         return py_trees.common.Status.SUCCESS
 
@@ -508,11 +508,6 @@ class TaskPackBottleNode(Node):
             "Pick Ready?", Stages.PICK_READY,
             RunGoToFillAsync("Move to Fill"))
 
-        initiate_fill_seq = make_seq(
-            "Fill",
-            "At Fill?", Stages.MOVE_TO_FILL_READY,
-            WaitFilling("Wait Filling"))
-
         go_to_cap_seq = make_seq(
             "Go to Cap",
             "Fill Completed?", Stages.FILL_READY,
@@ -539,7 +534,6 @@ class TaskPackBottleNode(Node):
             detect_seq,
             pick_seq,
             go_to_fill_seq,
-            initiate_fill_seq,
             go_to_cap_seq,
             cap_seq,
             handover_seq,
