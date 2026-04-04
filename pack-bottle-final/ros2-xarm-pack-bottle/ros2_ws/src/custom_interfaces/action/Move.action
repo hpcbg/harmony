@@ -1,0 +1,11 @@
+# Goal
+string pose_json
+
+---
+# Result
+bool success
+string message
+
+---
+# Feedback
+string state
