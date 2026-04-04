@@ -1,0 +1,1 @@
+python gesture-commands-fiware.py
