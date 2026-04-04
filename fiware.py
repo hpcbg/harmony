@@ -33,7 +33,9 @@ def ensure_entity():
         "pickRotation": {"type": "Float",   "value": 0.0},
         "error":        {"type": "Text",    "value": ""},
         "command":      {"type": "Text",    "value": ""},
-        "json":         {"type": "Text",    "value": encoded_json}
+        "json":         {"type": "Text",    "value": encoded_json},
+        "last_image":   {"type": "Text",    "value": ""},
+        "last_bottle":  {"type": "Text",    "value": "-"}
     }
     try:
         r = httpx.post(
@@ -105,7 +107,9 @@ def update_job_status(job_id: str, status: str, bottle_count: int = 0, error: st
         "pickY":        {"type": "Float",   "value": pick_pose["y"] if pick_pose else 0.0},
         "pickRotation": {"type": "Float",   "value": pick_pose["rotation"] if pick_pose else 0.0},
         "error":        {"type": "Text",    "value": error},
-        "json":         {"type": "Text",    "value": encoded_json}
+        "json":         {"type": "Text",    "value": encoded_json},
+        "last_image":   {"type": "Text",    "value": f"http://127.0.0.1:22001/api/v1/jobs/{job_id}/image/processed"},
+        "last_bottle":  {"type": "Text",    "value": f"{int(pick_pose['x'])} mm, {int(pick_pose['y'])} mm, {int(pick_pose['rotation'])} deg" if pick_pose else "-"}
     }
     try:
         url = f"{ORION_URL}/v2/entities/{ENTITY_ID}/attrs"
