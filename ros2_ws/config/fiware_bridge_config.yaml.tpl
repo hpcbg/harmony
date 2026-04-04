@@ -41,13 +41,6 @@ ros_to_fiware:
     fiware_attribute: "status"
     ros_field: "data"
 
-  - ros_topic: "/bottle_detector_brigde/processed_image"
-    ros_msg_type: "std_msgs/String"
-    fiware_entity: "last_processed_image"
-    fiware_entity_type: "String"
-    fiware_attribute: "url"
-    ros_field: "data"
-
   - ros_topic: "/xarm_pack_bottle/robot_status"
     ros_msg_type: "std_msgs/String"
     fiware_entity: "xarm_robot"
