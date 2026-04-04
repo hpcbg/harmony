@@ -507,8 +507,8 @@ def main():
     cap = cv2.VideoCapture(ARGS.camera)
     if not cap.isOpened():
         raise RuntimeError(f"Cannot open webcam (index {ARGS.camera}).")
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH,  1280)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH,  800)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
 
     vel = VelocityTracker(window=8)
     timer = HoldTimer(CONFIRM_SECONDS)
