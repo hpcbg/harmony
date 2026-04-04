@@ -1,0 +1,1785 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cratedb_vulcanexus_uid"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 0,
+        "y": 0
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "mtopeniot",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cratedb_vulcanexus_uid"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \r\n    COUNT(*) AS \"Total\"\r\nFROM (\r\n    SELECT DISTINCT entity_id, time_index, stage\r\n    FROM \"mtopeniot\".\"ettaskpackbottle\"\r\n    WHERE $__timeFilter(time_index)\r\n        AND stage = 'HANDOVER_READY'\r\n) final_count;\r\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Total packed bottles",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cratedb_vulcanexus_uid"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "dthms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 5,
+        "y": 0
+      },
+      "id": 10,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "mtopeniot",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cratedb_vulcanexus_uid"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \r\n    AVG(duration_seconds)::bigint AS \"Average Duration\"\r\nFROM (\r\n    SELECT \r\n        (EXTRACT(EPOCH FROM (time_index2 - time_index1)))::bigint AS duration_seconds\r\n    FROM (\r\n        SELECT\r\n            time_index AS time_index1,\r\n            LEAD(time_index, 10) OVER (PARTITION BY entity_id ORDER BY time_index) AS time_index2,\r\n            stage AS stage1,\r\n            LEAD(stage, 10) OVER (PARTITION BY entity_id ORDER BY time_index) AS stage2\r\n        FROM (\r\n            SELECT DISTINCT entity_id, time_index, stage\r\n            FROM \"mtopeniot\".\"ettaskpackbottle\"\r\n            WHERE $__timeFilter(time_index)\r\n            ORDER BY time_index ASC\r\n        ) unique_rows\r\n    ) sub\r\n    WHERE stage1 = 'ACTIVE' \r\n      AND stage2 = 'HANDOVER_READY'\r\n      AND stage1 <> stage2\r\n      AND time_index2 IS NOT NULL\r\n) final_sub;\r\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Pack bottle average duration",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cratedb_vulcanexus_uid"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "dark-red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 10,
+        "y": 0
+      },
+      "id": 6,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "mtopeniot",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cratedb_vulcanexus_uid"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \r\n    (SELECT COUNT(DISTINCT CONCAT(entity_id, stage, time_index)) \r\n     FROM \"mtopeniot\".\"ettaskpackbottle\" \r\n     WHERE $__timeFilter(time_index) AND stage = 'DETECT_READY') \r\n    - \r\n    (SELECT COUNT(DISTINCT CONCAT(entity_id, stage, time_index)) \r\n     FROM \"mtopeniot\".\"ettaskpackbottle\" \r\n     WHERE $__timeFilter(time_index) AND stage = 'HANDOVER_READY') \r\nAS \"Difference\";",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Unfinished executions",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cratedb_vulcanexus_uid"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "dark-red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 15,
+        "y": 0
+      },
+      "id": 15,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "mtopeniot",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cratedb_vulcanexus_uid"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \r\n    COUNT(*) AS \"Total\"\r\nFROM (\r\n    SELECT \r\n        time_index1\r\n    FROM (\r\n        SELECT\r\n            time_index AS time_index1,\r\n            LEAD(time_index, 2) OVER (PARTITION BY entity_id ORDER BY time_index) AS time_index2,\r\n            stage AS stage1,\r\n            LEAD(stage, 2) OVER (PARTITION BY entity_id ORDER BY time_index) AS stage2\r\n        FROM (\r\n            SELECT DISTINCT entity_id, time_index, stage\r\n            FROM \"mtopeniot\".\"ettaskpackbottle\"\r\n            WHERE $__timeFilter(time_index)\r\n            ORDER BY time_index ASC\r\n        ) unique_rows\r\n    ) sub\r\n    WHERE stage1 = 'ACTIVE' \r\n      AND stage2 <> 'DETECT_READY'\r\n      AND stage1 <> stage2\r\n      AND time_index2 IS NOT NULL\r\n) final_count;\r\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Unsuccessful detections",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cratedb_vulcanexus_uid"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "dthms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 0,
+        "y": 7
+      },
+      "id": 11,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "mtopeniot",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cratedb_vulcanexus_uid"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \r\n    AVG(duration_seconds)::bigint AS \"Average Duration\"\r\nFROM (\r\n    SELECT \r\n        (EXTRACT(EPOCH FROM (time_index2 - time_index1)))::bigint AS duration_seconds\r\n    FROM (\r\n        SELECT\r\n            time_index AS time_index1,\r\n            LEAD(time_index, 1) OVER (PARTITION BY entity_id ORDER BY time_index) AS time_index2,\r\n            stage AS stage1,\r\n            LEAD(stage, 1) OVER (PARTITION BY entity_id ORDER BY time_index) AS stage2\r\n        FROM (\r\n            SELECT DISTINCT entity_id, time_index, stage\r\n            FROM \"mtopeniot\".\"ettaskpackbottle\"\r\n            WHERE $__timeFilter(time_index)\r\n            ORDER BY time_index ASC\r\n        ) unique_rows\r\n    ) sub\r\n    WHERE stage1 = 'DETECT_READY' \r\n      AND stage2 = 'PICK_READY'\r\n      AND stage1 <> stage2\r\n      AND time_index2 IS NOT NULL\r\n) final_sub;\r\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Pick average duration",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cratedb_vulcanexus_uid"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "dthms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 5,
+        "y": 7
+      },
+      "id": 12,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "mtopeniot",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cratedb_vulcanexus_uid"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \r\n    AVG(duration_seconds)::bigint AS \"Average Duration\"\r\nFROM (\r\n    SELECT \r\n        (EXTRACT(EPOCH FROM (time_index2 - time_index1)))::bigint AS duration_seconds\r\n    FROM (\r\n        SELECT\r\n            time_index AS time_index1,\r\n            LEAD(time_index, 2) OVER (PARTITION BY entity_id ORDER BY time_index) AS time_index2,\r\n            stage AS stage1,\r\n            LEAD(stage, 2) OVER (PARTITION BY entity_id ORDER BY time_index) AS stage2\r\n        FROM (\r\n            SELECT DISTINCT entity_id, time_index, stage\r\n            FROM \"mtopeniot\".\"ettaskpackbottle\"\r\n            WHERE $__timeFilter(time_index)\r\n            ORDER BY time_index ASC\r\n        ) unique_rows\r\n    ) sub\r\n    WHERE stage1 = 'PICK_READY' \r\n      AND stage2 = 'FILL_READY'\r\n      AND stage1 <> stage2\r\n      AND time_index2 IS NOT NULL\r\n) final_sub;\r\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Fill average duration",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cratedb_vulcanexus_uid"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "dthms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 10,
+        "y": 7
+      },
+      "id": 13,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "mtopeniot",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cratedb_vulcanexus_uid"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \r\n    AVG(duration_seconds)::bigint AS \"Average Duration\"\r\nFROM (\r\n    SELECT \r\n        (EXTRACT(EPOCH FROM (time_index2 - time_index1)))::bigint AS duration_seconds\r\n    FROM (\r\n        SELECT\r\n            time_index AS time_index1,\r\n            LEAD(time_index, 3) OVER (PARTITION BY entity_id ORDER BY time_index) AS time_index2,\r\n            stage AS stage1,\r\n            LEAD(stage, 3) OVER (PARTITION BY entity_id ORDER BY time_index) AS stage2\r\n        FROM (\r\n            SELECT DISTINCT entity_id, time_index, stage\r\n            FROM \"mtopeniot\".\"ettaskpackbottle\"\r\n            WHERE $__timeFilter(time_index)\r\n            ORDER BY time_index ASC\r\n        ) unique_rows\r\n    ) sub\r\n    WHERE stage1 = 'FILL_READY' \r\n      AND stage2 = 'CAP_READY'\r\n      AND stage1 <> stage2\r\n      AND time_index2 IS NOT NULL\r\n) final_sub;\r\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Cap average duration",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cratedb_vulcanexus_uid"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "dthms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 15,
+        "y": 7
+      },
+      "id": 14,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "mtopeniot",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cratedb_vulcanexus_uid"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \r\n    AVG(duration_seconds)::bigint AS \"Average Duration\"\r\nFROM (\r\n    SELECT \r\n        (EXTRACT(EPOCH FROM (time_index2 - time_index1)))::bigint AS duration_seconds\r\n    FROM (\r\n        SELECT\r\n            time_index AS time_index1,\r\n            LEAD(time_index, 2) OVER (PARTITION BY entity_id ORDER BY time_index) AS time_index2,\r\n            stage AS stage1,\r\n            LEAD(stage, 2) OVER (PARTITION BY entity_id ORDER BY time_index) AS stage2\r\n        FROM (\r\n            SELECT DISTINCT entity_id, time_index, stage\r\n            FROM \"mtopeniot\".\"ettaskpackbottle\"\r\n            WHERE $__timeFilter(time_index)\r\n            ORDER BY time_index ASC\r\n        ) unique_rows\r\n    ) sub\r\n    WHERE stage1 = 'CAP_READY' \r\n      AND stage2 = 'HANDOVER_READY'\r\n      AND stage1 <> stage2\r\n      AND time_index2 IS NOT NULL\r\n) final_sub;\r\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Handover average duration",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cratedb_vulcanexus_uid"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "fillOpacity": 70,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineWidth": 0,
+            "spanNulls": false
+          },
+          "mappings": [
+            {
+              "options": {
+                "ACTIVE": {
+                  "color": "super-light-orange",
+                  "index": 1,
+                  "text": "DETECT"
+                },
+                "CAP_READY": {
+                  "color": "super-light-purple",
+                  "index": 5,
+                  "text": "HANDOVER"
+                },
+                "DETECT_READY": {
+                  "color": "super-light-yellow",
+                  "index": 2,
+                  "text": "PICK"
+                },
+                "FILL_READY": {
+                  "color": "super-light-blue",
+                  "index": 4,
+                  "text": "CAP"
+                },
+                "IDLE": {
+                  "color": "super-light-red",
+                  "index": 0,
+                  "text": "IDLE"
+                },
+                "PICK_READY": {
+                  "color": "super-light-green",
+                  "index": 3,
+                  "text": "FILL"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 20,
+        "x": 0,
+        "y": 14
+      },
+      "id": 16,
+      "options": {
+        "alignValue": "left",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "mergeValues": true,
+        "rowHeight": 0.9,
+        "showValue": "auto",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "mtopeniot",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cratedb_vulcanexus_uid"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT DISTINCT time_index, stage\r\nFROM \"mtopeniot\".\"ettaskpackbottle\"\r\nWHERE stage IN ('IDLE', 'ACTIVE', 'DETECT_READY', 'PICK_READY', 'FILL_READY', 'CAP_READY')\r\n  AND $__timeFilter(time_index)\r\nORDER BY time_index ASC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Stages Timeline",
+      "type": "state-timeline"
+    },
+    {
+      "datasource": {
+        "uid": "cratedb_vulcanexus_uid"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "dthms"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "time_index1"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Date and time"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "duration_seconds"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Duration"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 20,
+        "x": 0,
+        "y": 21
+      },
+      "id": 1,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [
+            "last"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xField": "time_index1",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 100
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "mtopeniot",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \r\n    time_index1,\r\n    (EXTRACT(EPOCH FROM (time_index2 - time_index1)))::bigint AS duration_seconds\r\nFROM (\r\n    SELECT\r\n        time_index AS time_index1,\r\n        LEAD(time_index, 10) OVER (PARTITION BY entity_id ORDER BY time_index) AS time_index2,\r\n        stage AS stage1,\r\n        LEAD(stage, 10) OVER (PARTITION BY entity_id ORDER BY time_index) AS stage2\r\n    FROM (\r\n        SELECT DISTINCT entity_id, time_index, stage\r\n        FROM \"mtopeniot\".\"ettaskpackbottle\"\r\n        WHERE $__timeFilter(time_index)\r\n        ORDER BY time_index ASC\r\n    ) unique_rows\r\n) sub\r\nWHERE stage1 = 'ACTIVE' \r\n  AND stage2 = 'HANDOVER_READY'\r\n  AND stage1 <> stage2\r\n  AND time_index2 IS NOT NULL\r\nORDER BY time_index1 ASC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Pack bottle total duration",
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "dateFormat": "DD.MM HH:MM:SS",
+                "destinationType": "string",
+                "targetField": "time_index1",
+                "timezone": "Europe/Sofia"
+              }
+            ],
+            "fields": {}
+          }
+        }
+      ],
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "uid": "cratedb_vulcanexus_uid"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "dthms"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "time_index1"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Date and time"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "duration_seconds"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Duration"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 20,
+        "x": 0,
+        "y": 30
+      },
+      "id": 2,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [
+            "last"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xField": "time_index1",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 100
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "mtopeniot",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \r\n    time_index1,\r\n    (EXTRACT(EPOCH FROM (time_index2 - time_index1)))::bigint AS duration_seconds\r\nFROM (\r\n    SELECT\r\n        time_index AS time_index1,\r\n        LEAD(time_index, 2) OVER (PARTITION BY entity_id ORDER BY time_index) AS time_index2,\r\n        stage AS stage1,\r\n        LEAD(stage, 2) OVER (PARTITION BY entity_id ORDER BY time_index) AS stage2\r\n    FROM (\r\n        SELECT DISTINCT entity_id, time_index, stage\r\n        FROM \"mtopeniot\".\"ettaskpackbottle\"\r\n        WHERE $__timeFilter(time_index)\r\n        ORDER BY time_index ASC\r\n    ) unique_rows\r\n) sub\r\nWHERE stage1 = 'ACTIVE' \r\n  AND stage2 = 'DETECT_READY'\r\n  AND stage1 <> stage2\r\n  AND time_index2 IS NOT NULL\r\nORDER BY time_index1 ASC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Bottle detection duration",
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "dateFormat": "DD.MM HH:MM:SS",
+                "destinationType": "string",
+                "targetField": "time_index1",
+                "timezone": "Europe/Sofia"
+              }
+            ],
+            "fields": {}
+          }
+        }
+      ],
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "uid": "cratedb_vulcanexus_uid"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "dthms"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "time_index1"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Date and time"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "duration_seconds"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Duration"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 20,
+        "x": 0,
+        "y": 39
+      },
+      "id": 3,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [
+            "last"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xField": "time_index1",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 100
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "mtopeniot",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \r\n    time_index1,\r\n    (EXTRACT(EPOCH FROM (time_index2 - time_index1)))::bigint AS duration_seconds\r\nFROM (\r\n    SELECT\r\n        time_index AS time_index1,\r\n        LEAD(time_index, 1) OVER (PARTITION BY entity_id ORDER BY time_index) AS time_index2,\r\n        stage AS stage1,\r\n        LEAD(stage, 1) OVER (PARTITION BY entity_id ORDER BY time_index) AS stage2\r\n    FROM (\r\n        SELECT DISTINCT entity_id, time_index, stage\r\n        FROM \"mtopeniot\".\"ettaskpackbottle\"\r\n        WHERE $__timeFilter(time_index)\r\n        ORDER BY time_index ASC\r\n    ) unique_rows\r\n) sub\r\nWHERE stage1 = 'DETECT_READY' \r\n  AND stage2 = 'PICK_READY'\r\n  AND stage1 <> stage2\r\n  AND time_index2 IS NOT NULL\r\nORDER BY time_index1 ASC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Pick duration",
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "dateFormat": "DD.MM HH:MM:SS",
+                "destinationType": "string",
+                "targetField": "time_index1",
+                "timezone": "Europe/Sofia"
+              }
+            ],
+            "fields": {}
+          }
+        }
+      ],
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "uid": "cratedb_vulcanexus_uid"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "dthms"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "time_index1"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Date and time"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "duration_seconds"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Duration"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 20,
+        "x": 0,
+        "y": 47
+      },
+      "id": 7,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [
+            "last"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xField": "time_index1",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 100
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "mtopeniot",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \r\n    time_index1,\r\n    (EXTRACT(EPOCH FROM (time_index2 - time_index1)))::bigint AS duration_seconds\r\nFROM (\r\n    SELECT\r\n        time_index AS time_index1,\r\n        LEAD(time_index, 2) OVER (PARTITION BY entity_id ORDER BY time_index) AS time_index2,\r\n        stage AS stage1,\r\n        LEAD(stage, 2) OVER (PARTITION BY entity_id ORDER BY time_index) AS stage2\r\n    FROM (\r\n        SELECT DISTINCT entity_id, time_index, stage\r\n        FROM \"mtopeniot\".\"ettaskpackbottle\"\r\n        WHERE $__timeFilter(time_index)\r\n        ORDER BY time_index ASC\r\n    ) unique_rows\r\n) sub\r\nWHERE stage1 = 'PICK_READY' \r\n  AND stage2 = 'FILL_READY'\r\n  AND stage1 <> stage2\r\n  AND time_index2 IS NOT NULL\r\nORDER BY time_index1 ASC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Fill duration",
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "dateFormat": "DD.MM HH:MM:SS",
+                "destinationType": "string",
+                "targetField": "time_index1",
+                "timezone": "Europe/Sofia"
+              }
+            ],
+            "fields": {}
+          }
+        }
+      ],
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "uid": "cratedb_vulcanexus_uid"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "dthms"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "time_index1"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Date and time"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "duration_seconds"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Duration"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 20,
+        "x": 0,
+        "y": 56
+      },
+      "id": 8,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [
+            "last"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xField": "time_index1",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 100
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "mtopeniot",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \r\n    time_index1,\r\n    (EXTRACT(EPOCH FROM (time_index2 - time_index1)))::bigint AS duration_seconds\r\nFROM (\r\n    SELECT\r\n        time_index AS time_index1,\r\n        LEAD(time_index, 3) OVER (PARTITION BY entity_id ORDER BY time_index) AS time_index2,\r\n        stage AS stage1,\r\n        LEAD(stage, 3) OVER (PARTITION BY entity_id ORDER BY time_index) AS stage2\r\n    FROM (\r\n        SELECT DISTINCT entity_id, time_index, stage\r\n        FROM \"mtopeniot\".\"ettaskpackbottle\"\r\n        WHERE $__timeFilter(time_index)\r\n        ORDER BY time_index ASC\r\n    ) unique_rows\r\n) sub\r\nWHERE stage1 = 'FILL_READY' \r\n  AND stage2 = 'CAP_READY'\r\n  AND stage1 <> stage2\r\n  AND time_index2 IS NOT NULL\r\nORDER BY time_index1 ASC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Cap duration",
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "dateFormat": "DD.MM HH:MM:SS",
+                "destinationType": "string",
+                "targetField": "time_index1",
+                "timezone": "Europe/Sofia"
+              }
+            ],
+            "fields": {}
+          }
+        }
+      ],
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "uid": "cratedb_vulcanexus_uid"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "dthms"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "time_index1"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Date and time"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "duration_seconds"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Duration"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 20,
+        "x": 0,
+        "y": 65
+      },
+      "id": 9,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [
+            "last"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xField": "time_index1",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 100
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "mtopeniot",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \r\n    time_index1,\r\n    (EXTRACT(EPOCH FROM (time_index2 - time_index1)))::bigint AS duration_seconds\r\nFROM (\r\n    SELECT\r\n        time_index AS time_index1,\r\n        LEAD(time_index, 2) OVER (PARTITION BY entity_id ORDER BY time_index) AS time_index2,\r\n        stage AS stage1,\r\n        LEAD(stage, 2) OVER (PARTITION BY entity_id ORDER BY time_index) AS stage2\r\n    FROM (\r\n        SELECT DISTINCT entity_id, time_index, stage\r\n        FROM \"mtopeniot\".\"ettaskpackbottle\"\r\n        WHERE $__timeFilter(time_index)\r\n        ORDER BY time_index ASC\r\n    ) unique_rows\r\n) sub\r\nWHERE stage1 = 'CAP_READY' \r\n  AND stage2 = 'HANDOVER_READY'\r\n  AND stage1 <> stage2\r\n  AND time_index2 IS NOT NULL\r\nORDER BY time_index1 ASC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Handover duration",
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "dateFormat": "DD.MM HH:MM:SS",
+                "destinationType": "string",
+                "targetField": "time_index1",
+                "timezone": "Europe/Sofia"
+              }
+            ],
+            "fields": {}
+          }
+        }
+      ],
+      "type": "barchart"
+    }
+  ],
+  "preload": false,
+  "refresh": "10s",
+  "schemaVersion": 42,
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-5m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Performance Monitoring",
+  "uid": "advddwn",
+  "version": 2,
+  "weekStart": ""
+}
