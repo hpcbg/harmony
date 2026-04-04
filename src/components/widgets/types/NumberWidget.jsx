@@ -9,7 +9,7 @@ export default function NumberWidget({ widget }) {
       <div className="text-lg text-gray-600 mb-2 flex justify-center items-center">
         {widget.config?.label || widget.name}
       </div>
-      <div className="text-base text-blue-600 flex justify-center items-center">
+      <div className="text-4xl text-blue-600 flex justify-center items-center">
         {data?.value ?? "--"}
       </div>
     </div>
