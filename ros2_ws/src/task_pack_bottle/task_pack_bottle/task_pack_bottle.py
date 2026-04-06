@@ -107,6 +107,7 @@ class UserRequestsMonitor(py_trees.behaviour.Behaviour):
     def __init__(self, name):
         super().__init__(name)
         self.prev_voice_command = None
+        self.fast_voice_commands = False
         self.node = None
         self.blackboard = py_trees.blackboard.Client(name=name)
         self.blackboard.register_key(
@@ -148,7 +149,7 @@ class UserRequestsMonitor(py_trees.behaviour.Behaviour):
             self._transition(Stages.IDLE, "User aborted the task")
 
     def voice_command_callback(self, msg):
-        if self.prev_voice_command == "GO":
+        if self.fast_voice_commands or self.prev_voice_command == "GO":
             stage = self.blackboard.stage
             if msg.data == "PICK" and stage == Stages.IDLE:
                 self._transition(Stages.ACTIVE, "User requested pick")
@@ -161,6 +162,10 @@ class UserRequestsMonitor(py_trees.behaviour.Behaviour):
                                  "User requested handover")
             elif msg.data == "STOP" and stage != Stages.IDLE:
                 self._transition(Stages.IDLE, "User aborted the task")
+            elif msg.data == "FAST":
+                self.fast_voice_commands = True
+            elif msg.data == "SAFE":
+                self.fast_voice_commands = False
         self.prev_voice_command = msg.data
 
     def gesture_command_callback(self, msg):
