@@ -20,6 +20,7 @@ class EduBotPackBottle(Node):
 
         self.gripper_open = 1000
         self.gripper_close = 300
+        self.pick_offset_mm = [140, 0, 10]
 
         self.arm = StsRobotAPI(port="/dev/ttyACM0")
         self.arm.connect()
@@ -117,7 +118,7 @@ class EduBotPackBottle(Node):
 
     def run_pick(self, goal_handle):
         d = json.loads(goal_handle.request.pose_json)
-        pick_pose = d['pick_pose']
+        pick_pose = d
         self.get_logger().info(
             f"Pick pose: {pick_pose}")
 
@@ -127,12 +128,12 @@ class EduBotPackBottle(Node):
         self.arm.set_gripper_position(self.gripper_open, wait=True)
 
         self.send_move_feedback(goal_handle, "Pick: Approach pick position")
-        self.arm.set_position(pick_pose['x'], pick_pose['y'], 50,
-                              90 - pick_pose['yaw_degrees'], 0, 180, wait=True, speed=100, mvacc=50)
+        self.arm.set_position(pick_pose['x'] + self.pick_offset_mm[0], pick_pose['y'] + self.pick_offset_mm[1], self.pick_offset_mm[2] + 50,
+                              90 - pick_pose['rotation'], 0, 180, wait=True, speed=100, mvacc=50)
 
         self.send_move_feedback(goal_handle, "Pick: Move to pick position")
-        self.arm.set_position(pick_pose['x'], pick_pose['y'], 10,
-                              90 - pick_pose['yaw_degrees'], 0, 180, wait=True, speed=100, mvacc=50)
+        self.arm.set_position(pick_pose['x'] + self.pick_offset_mm[0], pick_pose['y'] + self.pick_offset_mm[1], self.pick_offset_mm[2],
+                              90 - pick_pose['rotation'], 0, 180, wait=True, speed=100, mvacc=50)
 
         time.sleep(2)
         self.send_move_feedback(goal_handle, "Pick: Close gripper")
@@ -140,8 +141,8 @@ class EduBotPackBottle(Node):
         time.sleep(2)
 
         self.send_move_feedback(goal_handle, "Pick: Return to approach height")
-        self.arm.set_position(pick_pose['x'], pick_pose['y'], 50,
-                              pick_pose['yaw_degrees'], 0, 180, wait=True, speed=100, mvacc=50)
+        self.arm.set_position(pick_pose['x'] + self.pick_offset_mm[0], pick_pose['y'] + self.pick_offset_mm[1], self.pick_offset_mm[2] + 50,
+                              pick_pose['rotation'], 0, 180, wait=True, speed=100, mvacc=50)
 
         self.send_move_feedback(
             goal_handle, "Pick: Set after pick orientation")

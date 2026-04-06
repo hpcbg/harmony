@@ -1,4 +1,5 @@
 import json
+import re
 
 import rclpy
 from rclpy.node import Node
@@ -29,6 +30,19 @@ class Stages(IntEnum):
     HANDOVER_EXECUTE = 14
     HANDOVER_READY = 15
     IDLE = 100
+
+
+def sanitize_for_orion(text: str) -> str:
+    """
+    Remove all forbidden characters for Orion Context Broker.
+    Forbidden chars: < > " ' = ; ( ) 
+    Also removes control characters.
+    """
+    forbidden_chars = r'[<>"\'=;()]'
+    sanitized = re.sub(forbidden_chars, '', text)
+    # Also strip control characters
+    sanitized = re.sub(r'[\x00-\x1f\x7f]', '', sanitized)
+    return sanitized
 
 
 class ReportStatus(py_trees.behaviour.Behaviour):
@@ -107,6 +121,7 @@ class UserRequestsMonitor(py_trees.behaviour.Behaviour):
     def __init__(self, name):
         super().__init__(name)
         self.prev_voice_command = None
+        self.fast_voice_commands = False
         self.node = None
         self.blackboard = py_trees.blackboard.Client(name=name)
         self.blackboard.register_key(
@@ -148,7 +163,7 @@ class UserRequestsMonitor(py_trees.behaviour.Behaviour):
             self._transition(Stages.IDLE, "User aborted the task")
 
     def voice_command_callback(self, msg):
-        if self.prev_voice_command == "GO":
+        if self.fast_voice_commands or self.prev_voice_command == "GO":
             stage = self.blackboard.stage
             if msg.data == "PICK" and stage == Stages.IDLE:
                 self._transition(Stages.ACTIVE, "User requested pick")
@@ -161,6 +176,10 @@ class UserRequestsMonitor(py_trees.behaviour.Behaviour):
                                  "User requested handover")
             elif msg.data == "STOP" and stage != Stages.IDLE:
                 self._transition(Stages.IDLE, "User aborted the task")
+            elif msg.data == "FAST":
+                self.fast_voice_commands = True
+            elif msg.data == "SAFE":
+                self.fast_voice_commands = False
         self.prev_voice_command = msg.data
 
     def gesture_command_callback(self, msg):
@@ -331,7 +350,8 @@ class RunActionAsync(py_trees.behaviour.Behaviour):
                     self.blackboard.stage = self.ready_stage
                     return py_trees.common.Status.SUCCESS
                 else:
-                    self.blackboard.status = f"Action failed: {self.result.message}!"
+                    self.blackboard.status = sanitize_for_orion(
+                        f"Action failed: {self.result.message}!")
                     return py_trees.common.Status.FAILURE
             else:
                 self.blackboard.stage = self.execute_stage
