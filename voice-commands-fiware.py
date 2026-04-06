@@ -95,21 +95,22 @@ MODELS = {
     },
 }
 
-SAMPLE_RATE  = 16000   # Hz — Vosk models expect 16 kHz mono
-BLOCK_SIZE   = 8000    # samples per audio callback (~0.5 s)
-MODELS_DIR   = Path.home() / ".cache" / "vosk_models"
+SAMPLE_RATE = 16000   # Hz — Vosk models expect 16 kHz mono
+BLOCK_SIZE = 8000    # samples per audio callback (~0.5 s)
+MODELS_DIR = Path.home() / ".cache" / "vosk_models"
 
 # Default command keywords — pass --keywords [WORD ...] to override
-DEFAULT_KEYWORDS: list[str] = ["stop", "go", "cap", "give", "pick"]
+DEFAULT_KEYWORDS: list[str] = ["stop", "go",
+                               "cap", "give", "pick", "safe", "fast"]
 
 # ANSI colours for keyword highlights (degrades gracefully on plain terminals)
-_RESET  = "\033[0m"
-_BOLD   = "\033[1m"
+_RESET = "\033[0m"
+_BOLD = "\033[1m"
 _COLORS = {
     "stop":     "\033[91m",   # bright red
     "go":       "\033[92m",   # bright green
     "cap":      "\033[93m",   # bright yellow
-    "give": "\033[94m",   # bright blue
+    "give":     "\033[94m",  # bright blue
     "pick":     "\033[95m",   # bright magenta
 }
 _DEFAULT_COLOR = "\033[96m"   # bright cyan for any extra keywords
@@ -123,11 +124,11 @@ _DEFAULT_COLOR = "\033[96m"   # bright cyan for any extra keywords
 # NGSIv2 is always enabled, simpler, and fully sufficient for our use case.
 # fiware_bridge.py subscribes via NGSIv2 as well.
 
-DEFAULT_BROKER       = "http://localhost:1026"
-DEFAULT_SERVICE      = "openiot"        # Fiware-Service header (logical tenant)
-DEFAULT_SERVICEPATH  = "/"             # Fiware-Servicepath header
-ENTITY_TYPE          = "VoiceCommand"
-ENTITY_ID            = "VoiceCommand:operator-1"
+DEFAULT_BROKER = "http://localhost:1026"
+DEFAULT_SERVICE = "openiot"        # Fiware-Service header (logical tenant)
+DEFAULT_SERVICEPATH = "/"             # Fiware-Servicepath header
+ENTITY_TYPE = "VoiceCommand"
+ENTITY_ID = "VoiceCommand:operator-1"
 
 
 class FiwarePublisher:
@@ -158,15 +159,15 @@ class FiwarePublisher:
             print("       Install it with:  pip install requests")
             sys.exit(1)
 
-        self.broker      = broker_url.rstrip("/")
-        self.source_id   = source_id
-        self.service     = service
+        self.broker = broker_url.rstrip("/")
+        self.source_id = source_id
+        self.service = service
         self.servicepath = servicepath
-        self.verbose     = verbose
-        self._created    = False
+        self.verbose = verbose
+        self._created = False
         self._entity_url = f"{self.broker}/v2/entities/{ENTITY_ID}"
-        self._attrs_url  = f"{self._entity_url}/attrs"
-        self._headers    = {
+        self._attrs_url = f"{self._entity_url}/attrs"
+        self._headers = {
             "Content-Type":       "application/json",
             "Accept":             "application/json",
             "Fiware-Service":     self.service,
@@ -216,7 +217,8 @@ class FiwarePublisher:
             elif r.status_code == 422:  # Unprocessable — already exists
                 self._log("Entity already exists, will PATCH attributes.")
             else:
-                print(f"  [FIWARE] WARNING: entity creation returned {r.status_code}: {r.text}")
+                print(
+                    f"  [FIWARE] WARNING: entity creation returned {r.status_code}: {r.text}")
                 return
         except _requests.exceptions.ConnectionError:
             print(f"  [FIWARE] ERROR: cannot reach broker at {self.broker}")
@@ -235,7 +237,7 @@ class FiwarePublisher:
         if not self._created:
             return
 
-        now  = self._iso_now()
+        now = self._iso_now()
         body = {
             "command":    {"type": "Text",     "value": command.upper()},
             "confidence": {"type": "Number",   "value": confidence},
@@ -252,9 +254,11 @@ class FiwarePublisher:
             if r.status_code == 204:
                 self._log(f"Published '{command}' at {now}")
             else:
-                print(f"  [FIWARE] WARNING: PATCH returned {r.status_code}: {r.text}")
+                print(
+                    f"  [FIWARE] WARNING: PATCH returned {r.status_code}: {r.text}")
         except _requests.exceptions.ConnectionError:
-            print(f"  [FIWARE] ERROR: lost connection to broker at {self.broker}")
+            print(
+                f"  [FIWARE] ERROR: lost connection to broker at {self.broker}")
 
     def check_connection(self) -> bool:
         try:
@@ -262,7 +266,6 @@ class FiwarePublisher:
             return r.status_code < 500
         except _requests.exceptions.RequestException:
             return False
-
 
 
 # ---------------------------------------------------------------------------
@@ -275,8 +278,8 @@ def download_model(lang: str) -> Path:
         print(f"Unknown language '{lang}'. Available: {', '.join(MODELS)}")
         sys.exit(1)
 
-    info       = MODELS[lang]
-    model_dir  = MODELS_DIR / info["name"]
+    info = MODELS[lang]
+    model_dir = MODELS_DIR / info["name"]
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
     if model_dir.exists():
@@ -419,7 +422,7 @@ def recognize(model: Model, device: int | None, keywords: list[str] | None,
 
             if recognizer.AcceptWaveform(data):
                 result = json.loads(recognizer.Result())
-                text   = result.get("text", "").strip()
+                text = result.get("text", "").strip()
                 if not text:
                     continue
 
@@ -429,7 +432,8 @@ def recognize(model: Model, device: int | None, keywords: list[str] | None,
                     # Instead, print only the clean keyword names we matched.
                     found = _extract_keywords(text, kw_set)
                     if found:
-                        print("\r" + " " * 60 + "\r", end="")  # clear partial line
+                        # clear partial line
+                        print("\r" + " " * 60 + "\r", end="")
                         labels = "  ".join(_fmt_keyword(kw) for kw in found)
                         print(f"▶ {labels}")
                         # Publish each detected keyword to FIWARE
