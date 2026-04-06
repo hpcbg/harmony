@@ -8,5 +8,11 @@ datasources:
     database: mtopeniot
     jsonData:
       sslmode: 'disable'
-      postgresVersion: 12
+      postgresVersion: 1200
+      connMaxLifetime: 14400
+      maxIdleConns: 100
+      maxOpenConns: 100
+      database: mtopeniot
+    secureJsonData:
+      password: ''
     editable: true

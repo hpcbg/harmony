@@ -257,7 +257,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \r\n    (SELECT COUNT(DISTINCT CONCAT(entity_id, stage, time_index)) \r\n     FROM \"mtopeniot\".\"ettaskpackbottle\" \r\n     WHERE $__timeFilter(time_index) AND stage = 'DETECT_READY') \r\n    - \r\n    (SELECT COUNT(DISTINCT CONCAT(entity_id, stage, time_index)) \r\n     FROM \"mtopeniot\".\"ettaskpackbottle\" \r\n     WHERE $__timeFilter(time_index) AND stage = 'HANDOVER_READY') \r\nAS \"Difference\";",
+          "rawSql": "SELECT \r\n    COUNT(DISTINCT CASE WHEN stage = 'DETECT_READY' THEN CONCAT(entity_id, time_index) END) - \r\n    COUNT(DISTINCT CASE WHEN stage = 'HANDOVER_READY' THEN CONCAT(entity_id, time_index) END) AS \"Difference\"\r\nFROM \"mtopeniot\".\"ettaskpackbottle\"\r\nWHERE $__timeFilter(time_index)\r\n  AND time_index >= (\r\n      SELECT COALESCE(MIN(time_index), '1970-01-01') \r\n      FROM \"mtopeniot\".\"ettaskpackbottle\" \r\n      WHERE $__timeFilter(time_index) AND stage = 'DETECT_READY'\r\n  );\r\n",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1780,6 +1780,6 @@
   "timezone": "browser",
   "title": "Performance Monitoring",
   "uid": "advddwn",
-  "version": 2,
+  "version": 3,
   "weekStart": ""
 }
