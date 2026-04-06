@@ -1,4 +1,5 @@
 import json
+import re
 
 import rclpy
 from rclpy.node import Node
@@ -29,6 +30,19 @@ class Stages(IntEnum):
     HANDOVER_EXECUTE = 14
     HANDOVER_READY = 15
     IDLE = 100
+
+
+def sanitize_for_orion(text: str) -> str:
+    """
+    Remove all forbidden characters for Orion Context Broker.
+    Forbidden chars: < > " ' = ; ( ) 
+    Also removes control characters.
+    """
+    forbidden_chars = r'[<>"\'=;()]'
+    sanitized = re.sub(forbidden_chars, '', text)
+    # Also strip control characters
+    sanitized = re.sub(r'[\x00-\x1f\x7f]', '', sanitized)
+    return sanitized
 
 
 class ReportStatus(py_trees.behaviour.Behaviour):
@@ -336,7 +350,8 @@ class RunActionAsync(py_trees.behaviour.Behaviour):
                     self.blackboard.stage = self.ready_stage
                     return py_trees.common.Status.SUCCESS
                 else:
-                    self.blackboard.status = f"Action failed: {self.result.message}!"
+                    self.blackboard.status = sanitize_for_orion(
+                        f"Action failed: {self.result.message}!")
                     return py_trees.common.Status.FAILURE
             else:
                 self.blackboard.stage = self.execute_stage
