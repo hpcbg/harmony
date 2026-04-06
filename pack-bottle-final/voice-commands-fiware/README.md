@@ -2,7 +2,7 @@
 
 This repository contains a Python script which will listen to a list of predefined voice commands (keywords) and when a keyword is recognized it will be send to the FIWARE.
 
-For the speech recognition the Vosk models are used. The default set of keywords is GO, STOP, PICK, CAP and GIVE.
+For the speech recognition the Vosk models are used. The default set of keywords is GO, STOP, PICK, CAP, GIVE, SAFE and FAST.
 
 The FIWARE must be running. The voice command detection uses Fiware-Service and Fiware-Servicepath headers to scope entities into a logical tenant — the same pattern used by IoT Agents and M5Stack devices:
 
