@@ -1,0 +1,49 @@
+NOTICE
+
+This software includes components from the following projects:
+
+1. OpenCV (Apache License 2.0)
+   Copyright (C) 2000-2023, Intel Corporation
+   Copyright (C) 2009-2016, NVIDIA Corporation
+   Copyright (C) 2015-2023, OpenCV Foundation
+   https://opencv.org/
+
+2. PyTorch (BSD 3-Clause License)
+   Copyright (c) 2016-present, Meta Platforms, Inc.
+   https://pytorch.org/
+
+3. torchvision (BSD 3-Clause License)
+   Copyright (c) 2016-present, Meta Platforms, Inc.
+   https://pytorch.org/vision/
+
+4. NumPy (BSD 3-Clause License)
+   Copyright (c) 2005-2023, NumPy Developers
+   https://numpy.org/
+
+5. Pillow (PIL License)
+   Copyright © 1997-2011 by Secret Labs AB
+   Copyright © 1995-2011 by Fredrik Lundh
+   Copyright © 2010-2023 by Jeffrey A. Clark and contributors
+   https://pillow.readthedocs.io/
+
+6. Matplotlib (PSF-based License)
+   Copyright (c) 2002-2023 John D. Hunter, Michael Droettboom
+   https://matplotlib.org/
+
+7. Jupyter (BSD 3-Clause License)
+   Copyright (c) 2017, Project Jupyter Contributors
+   https://jupyter.org/
+
+8. FastAPI (MIT License)
+   Copyright (c) 2018 Sebastián Ramírez
+   https://fastapi.tiangolo.com/
+
+9. Uvicorn (BSD 3-Clause "New" or "Revised" License)
+   Copyright © 2017-present, Encode OSS Ltd. All rights reserved.
+   https://uvicorn.dev/
+
+10. Pydantic Validation (MIT License)
+   Copyright (c) 2017 to present Pydantic Services Inc. and individual contributors.
+   https://docs.pydantic.dev/
+
+For full license texts, see THIRD_PARTY_LICENSES.md

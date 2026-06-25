@@ -1,0 +1,1 @@
+python voice-commands-fiware.py --fiware

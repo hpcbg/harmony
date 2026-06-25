@@ -1,0 +1,226 @@
+{
+  "pages": [
+    {
+      "id": "home",
+      "name": "Home",
+      "widgets": [
+        {
+          "id": "1765720966379mt4rqi4bd",
+          "x": 10,
+          "y": 10,
+          "width": 550,
+          "height": 460
+        },
+        {
+          "id": "1765721180696lqx28q0d2",
+          "x": 570,
+          "y": 10,
+          "width": 550,
+          "height": 460
+        },
+        {
+          "id": "17657213656357pr1iverr",
+          "x": 10,
+          "y": 480,
+          "width": 1110,
+          "height": 150
+        },
+        {
+          "id": "1765722016356gf4s8tmtu",
+          "x": 1130,
+          "y": 180,
+          "width": 220,
+          "height": 140
+        },
+        {
+          "id": "1765722199485iakjjdpp6",
+          "x": 1130,
+          "y": 330,
+          "width": 220,
+          "height": 140
+        },
+        {
+          "id": "1765722474194b9y8roddw",
+          "x": 1360,
+          "y": 330,
+          "width": 220,
+          "height": 140
+        },
+        {
+          "id": "1765723107631sebsz5oz3",
+          "x": 1130,
+          "y": 10,
+          "width": 450,
+          "height": 160
+        },
+        {
+          "id": "1773656490023yvgijyv19",
+          "x": 1360,
+          "y": 480,
+          "width": 220,
+          "height": 150
+        },
+        {
+          "id": "1773680466727xj5d4ei49",
+          "x": 1360,
+          "y": 180,
+          "width": 220,
+          "height": 140
+        },
+        {
+          "id": "1773692608825fscs5l1l2",
+          "x": 1130,
+          "y": 480,
+          "width": 220,
+          "height": 150
+        }
+      ]
+    }
+  ],
+  "widgets": [
+    {
+      "id": "1765720966379mt4rqi4bd",
+      "name": "Camera Live Image",
+      "type": "image",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:22001/api/v1/camera/snapshot"
+    },
+    {
+      "id": "1765721180696lqx28q0d2",
+      "name": "Last Bottle Detection",
+      "type": "image",
+      "updateInterval": 3000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/last_processed_image/attrs/url"
+    },
+    {
+      "id": "17657213656357pr1iverr",
+      "name": "Task Status",
+      "type": "number",
+      "updateInterval": 500,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/task_pack_bottle/attrs/status"
+    },
+    {
+      "id": "1765722016356gf4s8tmtu",
+      "name": "Robot Status",
+      "type": "number",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/xarm_robot/attrs/status"
+    },
+    {
+      "id": "1765722110573ll63kyipd",
+      "name": "Start Button",
+      "type": "number",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/start_button/attrs/value"
+    },
+    {
+      "id": "1765722199485iakjjdpp6",
+      "name": "Start Button",
+      "type": "state",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://192.168.1.105:1026/v2/entities/M5Stick:001/attrs/buttonBlue"
+    },
+    {
+      "id": "1765722452781cmt059ajy",
+      "name": "Abort Button",
+      "type": "number",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/M5Stick:001/attrs/buttonRed"
+    },
+    {
+      "id": "1765722474194b9y8roddw",
+      "name": "Abort Button",
+      "type": "state",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://192.168.1.105:1026/v2/entities/M5Stick:001/attrs/buttonRed"
+    },
+    {
+      "id": "1765723107631sebsz5oz3",
+      "name": "Last Found Bottle",
+      "type": "number",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/last_found_bottle/attrs/info"
+    },
+    {
+      "id": "1765723706735xj6mvbf67",
+      "name": "Demo Line Chart",
+      "type": "historyLineChart",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/M5Stick:001/attrs/angle"
+    },
+    {
+      "id": "176572379180774nazjw0k",
+      "name": "Demo Bar Chart",
+      "type": "historyBarChart",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/M5Stick:001/attrs/angle"
+    },
+    {
+      "id": "1773656490023yvgijyv19",
+      "name": "Last Voice Command",
+      "type": "number",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://192.168.1.105:1026/v2/entities/VoiceCommand:operator-1/attrs/command"
+    },
+    {
+      "id": "1773656775512f0p2zohbe",
+      "name": "dasdas",
+      "type": "number",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/VoiceCommand:operator-1/attrs/command"
+    },
+    {
+      "id": "1773658496913ygrwpwjij",
+      "name": "gesture",
+      "type": "number",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/GestureDetector:operator-1/attrs/command"
+    },
+    {
+      "id": "177366986179013f5930zn",
+      "name": "voice",
+      "type": "number",
+      "updateInterval": 5000,
+      "maxValues": 20,
+      "endpoint": "http://192.168.1.105:1026/v2/entities/VoiceCommand:operator-1/attrs/command"
+    },
+    {
+      "id": "1773670242949dnmz16cld",
+      "name": "gesture",
+      "type": "number",
+      "updateInterval": 5000,
+      "maxValues": 20,
+      "endpoint": "http://192.168.1.105:1026/v2/entities/GestureDetector:operator-1/attrs/command"
+    },
+    {
+      "id": "1773680466727xj5d4ei49",
+      "name": "Fill Progress",
+      "type": "number",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://localhost:1026/v2/entities/filling_station/attrs/progress"
+    },
+    {
+      "id": "1773692608825fscs5l1l2",
+      "name": "Gesture",
+      "type": "number",
+      "updateInterval": 1000,
+      "maxValues": 20,
+      "endpoint": "http://192.168.1.105:1026/v2/entities/GestureDetector:operator-1/attrs/command"
+    }
+  ]
+}
