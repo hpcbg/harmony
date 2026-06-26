@@ -1,0 +1,28 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# HARMONY — Python dependencies for the D4 shareable module (fiware_bridge)
+#
+# These are the ONLY Python packages required to run the `fiware_bridge`
+# hello world (see README → "Hello World"). Both are permissively licensed,
+# so the bridge can be shipped as a standalone MIT package.
+#
+# Install into a virtual environment:
+#     python3 -m venv venv
+#     source venv/bin/activate
+#     pip install -r requirements.txt
+#
+# The ROS 2 runtime (rclpy, std_msgs) is provided by the ROS 2 / Vulcanexus
+# installation, not by pip — see install_prerequisites.sh.
+# ─────────────────────────────────────────────────────────────────────────────
+
+requests>=2.28        # Apache 2.0 — HTTP client for the NGSI-v2 REST API
+pyyaml>=6.0           # MIT       — parses bridge_config.yaml
+
+# ─── Optional HRI modules (install separately, in their own venv) ─────────────
+# The gesture and voice recognisers are NOT needed for the bridge hello world.
+# Install them only if you want the full HRI surface:
+#     pip install -r gesture-commands-fiware/requirements.txt
+#     pip install -r voice-commands-fiware/requirements.txt
+#
+# The AI bottle detector needs PyTorch (not pip-installable from a plain
+# requirements.txt — pick the CPU/CUDA wheel). The setup assistant (setup.py)
+# creates a dedicated `torch_venv` for it.

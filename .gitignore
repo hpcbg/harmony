@@ -1,1 +1,52 @@
+# --- internal working notes (not part of the deliverable) ---
+D4_requirements.md
+
+# --- secrets / generated env (CRITICAL: keep out of a public repo) ---
+.env
+.env.*
+*.env
+# Generated per-deployment by the React setup assistant.
+# Commit a launch_pack_bottle.sh.sample instead if you want a template.
+launch_pack_bottle.sh
+
+# --- ROS 2 / colcon workspace artifacts ---
+build/
+install/
+log/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+torch_venv/
+.pytest_cache/
+
+# --- Node / React ---
+node_modules/
+dist/
+.vite/
+npm-debug.log*
+
+# --- model weights (use git-lfs if they must ship with the hello world) ---
+*.pt
+*.onnx
+*.engine
+*.weights
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# --- Claude Code local state ---
+.claude/
+
+# --- Images for the README.md ---
 !images/*.png
+
+# --- Temporal materials ---
+materials/
