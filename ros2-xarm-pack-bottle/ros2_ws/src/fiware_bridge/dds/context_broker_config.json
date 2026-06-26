@@ -1,0 +1,29 @@
+{
+  "dds": {
+    "ddsmodule": {
+      "dds": {
+        "domain": 0,
+        "transport": "udp"
+      }
+    },
+    "ngsild": {
+      "topics": {
+        "rt/system_skill_pick_and_place/status": {
+          "entityType": "Status",
+          "entityId": "urn:ngsi-ld:Status:SystemSkillPickAndPlace",
+          "attribute": "status"
+        },
+        "rt/user_inputs/voice_command": {
+          "entityType": "VoiceCommand",
+          "entityId": "urn:ngsi-ld:VoiceCommand:operator-1",
+          "attribute": "command"
+        },
+        "rt/user_inputs/gesture_command": {
+          "entityType": "GestureDetector",
+          "entityId": "urn:ngsi-ld:GestureDetector:operator-1",
+          "attribute": "command"
+        }
+      }
+    }
+  }
+}

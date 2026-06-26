@@ -1,0 +1,48 @@
+# OPTIONAL Orion-LD DDS-bridge broker for the `bridge_backend:=dds` path.
+#
+# This is an ALTERNATIVE to the default NGSI-v2 stack in
+# `fiware-analytics-docker/docker-compose.yaml` (Orion 3.10.1). It runs a
+# DDS-capable Orion-LD that speaks DDS directly (`-wip dds -mongocOnly`) and maps
+# `rt/*` topics to NGSI-LD entities via the mounted context_broker_config.json —
+# so NO custom bridge node is needed on this path.
+#
+# Derived from the known-good ARISE ros2_fiware_basic_app example. Uses host
+# networking + IPC so DDS discovery reaches ROS 2 nodes on the host.
+#
+#   1. Generate the mapping:   python3 generate_config.py
+#   2. Start this broker:       docker compose -f docker-compose.dds.yml up -d
+#   3. See README.md for the full hello world.
+#
+# NOTE: do not run this at the same time as the default Orion stack — both bind
+# host port 1026.
+
+services:
+  mongodb:
+    image: mongo:7.0
+    privileged: true
+    ipc: host
+    network_mode: host
+    command: --bind_ip_all
+    volumes:
+      - mongo_dds_data:/data/db
+
+  orion:
+    image: fiware/orion-ld:1.13.0-PRE-1835
+    privileged: true
+    ipc: host
+    network_mode: host
+    depends_on:
+      - mongodb
+    restart: always
+    command: -dbhost localhost -wip dds -mongocOnly
+    environment:
+      - ORIONLD_MONGO_HOST=localhost
+    volumes:
+      - ./context_broker_config.json:/root/.orionld
+    healthcheck:
+      test: curl --fail -s http://localhost:1026/version || exit 1
+      interval: 30s
+      retries: 15
+
+volumes:
+  mongo_dds_data:

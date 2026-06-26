@@ -1,7 +1,12 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.actions import DeclareLaunchArgument, LogInfo
+from launch.conditions import IfCondition
+from launch.substitutions import (
+    LaunchConfiguration,
+    PathJoinSubstitution,
+    PythonExpression,
+)
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -14,6 +19,27 @@ def generate_launch_description():
         'config',
         'bridge_config.yaml'
     ])
+
+    # Bridge backend selector:
+    #   node (DEFAULT) -> launch the custom Python fiware_bridge node, as today.
+    #   dds            -> do NOT launch the node; the Orion-LD built-in DDS bridge
+    #                     is expected to be running with the generated
+    #                     fiware_bridge/dds/context_broker_config.json.
+    bridge_backend_arg = DeclareLaunchArgument(
+        'bridge_backend',
+        default_value='node',
+        description="ROS 2 <-> FIWARE bridge backend: 'node' (custom Python "
+                    "node, default) or 'dds' (Orion-LD built-in DDS bridge)"
+    )
+
+    use_node = IfCondition(
+        PythonExpression(["'", LaunchConfiguration('bridge_backend'),
+                          "' == 'node'"])
+    )
+    use_dds = IfCondition(
+        PythonExpression(["'", LaunchConfiguration('bridge_backend'),
+                          "' == 'dds'"])
+    )
 
     config_file_arg = DeclareLaunchArgument(
         'config_file',
@@ -40,6 +66,7 @@ def generate_launch_description():
     )
 
     configurable_bridge_node = Node(
+        condition=use_node,
         package='fiware_bridge',
         executable='configurable_fiware_bridge',
         name='configurable_fiware_bridge',
@@ -53,10 +80,21 @@ def generate_launch_description():
                    LaunchConfiguration('log_level')]
     )
 
+    dds_backend_notice = LogInfo(
+        condition=use_dds,
+        msg="bridge_backend:=dds -> custom fiware_bridge node NOT started. "
+            "Expecting the Orion-LD built-in DDS bridge to be running "
+            "(see fiware_bridge/dds/: docker-compose.dds.yml + "
+            "context_broker_config.json). Only std_msgs/String topics are "
+            "bridged on this path."
+    )
+
     return LaunchDescription([
+        bridge_backend_arg,
         config_file_arg,
         log_level_arg,
         fiware_host_arg,
         fiware_port_arg,
-        configurable_bridge_node
+        configurable_bridge_node,
+        dds_backend_notice
     ])

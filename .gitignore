@@ -50,3 +50,6 @@ npm-debug.log*
 
 # --- Temporal materials ---
 materials/
+
+# --- Local setup ---
+.setup_state.json

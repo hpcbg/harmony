@@ -370,9 +370,9 @@ def select_components() -> set:
 
         if not val:
             break
-        if val == "a":
+        if val == "a" or "A":
             selected = {key for key, _ in ALL_COMPONENTS}
-        elif val == "n":
+        elif val == "n" or "N":
             selected = set()
         else:
             try:
