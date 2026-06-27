@@ -2,6 +2,12 @@
 
 > **ARISE D4 Shareable Module** | MIT License | ROS 2 Jazzy / Vulcanexus | FIWARE Orion v3
 
+> ⚙️ **Branch `dds-full-integration` (exploratory — not the D4 deliverable).** On this branch the
+> DDS enabler backend covers **all scalar `std_msgs` types** (String/Bool/Int32/…), not just
+> `String`, and the reserved-`status`-leaf topic is handled via a `status_json` rename — see
+> [`fiware_bridge/docs/dds_full_integration_plan.md`](./ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/docs/dds_full_integration_plan.md).
+> The frozen `shareable-modules` deliverable keeps the conservative String-only DDS scope.
+
 **End user:** [CMYK Ingredients](https://www.cmykingredients.com/) &nbsp;·&nbsp;
 **Technology provider:** [High Performance Creators (HPCBG)](https://hpc.bg/)
 
@@ -279,35 +285,38 @@ opt-in. Existing behaviour is unchanged unless you explicitly choose `dds`.
 |---|---|---|
 | How | Custom Python node (`configurable_fiware_bridge`) over NGSI-v2 HTTP REST | **Orion-LD built-in DDS bridge** (`-wip dds -mongocOnly`) reading `context_broker_config.json` — no custom node runs |
 | API | NGSI-v2 (Orion 3.10.1) | NGSI-LD (Orion-LD) |
-| Topic types | All (`String`, `Bool`, `Int32`, value-mapping, base64) | **`std_msgs/String` only** (`rt/<topic>` → `.<attr>.value.data`) |
+| Topic types | All (`String`, `Bool`, `Int32`, value-mapping, base64) | **All scalar `std_msgs`** (`String`/`Bool`/`Int32`/…) — `rt/<topic>` → `.<attr>.value.data`; no `value_mapping`/base64 |
 | Infra | Standard Orion; no DDS plugin | DDS-capable Orion-LD; host networking |
 | ARISE alignment | Demonstrator-proven path | ARISE "DDS enabler" interoperability path |
 
 **Custom node** — chosen for the demonstrator because mappings are fully declarative (YAML, no
 code per app), the FIWARE side needs only a standard Orion broker, and HTTP REST is portable
-across LANs and Docker bridges. It carries **all** topic types, including the `Bool`/`Int32`
-M5Stack inputs that the generic DDS bridge cannot represent.
+across LANs and Docker bridges. It carries all topic types and reproduces the node-only transforms
+(`value_mapping`, base64) that the DDS enabler does not.
 
 **DDS enabler** — the ARISE-native alternative: ROS 2 / Vulcanexus DDS topics are mapped straight
-into Orion-LD as NGSI-LD entities, with no bridge node at all. It covers the `std_msgs/String`
-(JSON-in-string) topics; the `Bool`/`Int32` topics stay on the node path. Everything needed to run
-it — the config generator, the generated mapping, a DDS-capable `docker-compose`, and a
-hardware-free hello world — lives in
+into Orion-LD as NGSI-LD entities, with no bridge node at all. On this branch it covers **all
+scalar `std_msgs` topics** — the bridge maps each via DDS dynamic-type discovery as
+`.<attr>.value.data` (String→JSON string, Bool→JSON bool, Int→JSON number). The node-only
+transforms (`value_mapping`, base64) are **not** reproduced, so wire native values upstream (PATCH a
+real boolean, not `"ON"`). Everything needed to run it — the config generator, the generated
+mapping, a DDS-capable `docker-compose`, and a hardware-free hello world — lives in
 [`ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/dds/`](./ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/dds/),
-with the per-topic eligibility analysis in
-[`fiware_bridge/docs/bridge_inventory.md`](./ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/docs/bridge_inventory.md).
+with the per-class strategy and validation in
+[`fiware_bridge/docs/dds_full_integration_plan.md`](./ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/docs/dds_full_integration_plan.md).
 A single YAML mapping (`bridge_config.yaml`) drives **both** backends, so they never drift.
 
 This path was **validated end-to-end** (Orion-LD `1.13.0-PRE-1835`, publishing from the
-`eprosima/vulcanexus:jazzy-desktop` container): `/user_inputs/voice_command` and
-`/user_inputs/gesture_command` round-trip in both directions (ROS→FIWARE and FIWARE→ROS via
-`PATCH`). Two known constraints: (1) the DDS broker uses **NGSI-LD on Orion-LD**, a separate broker
-from the default NGSI-v2 stack, on the same host port `1026`; (2) ⚠️ a topic whose **leaf segment
-is exactly `status`** is not delivered by Orion-LD's DDS module (it collides with ROS 2 actions'
-`status`/`GoalStatusArray`), so `/system_skill_pick_and_place/status` stays on the node backend
-unless its leaf is renamed (e.g. `status_json`). Use the **Vulcanexus Docker image** for the ROS 2
-side — ARISE fixes Fast DDS as the middleware, and the container guarantees that environment
-without touching a host ROS install.
+`eprosima/vulcanexus:jazzy-desktop` container): all six bridged topics round-trip in both directions
+(ROS→FIWARE and FIWARE→ROS via `PATCH`) — `voice_command`/`gesture_command` (`String`), `/angle`
+(`Int32`), `/user_inputs/start_button`/`/user_inputs/stop_button` (`Bool`), and
+`/system_skill_pick_and_place/status_json` (`String`). Two notes: (1) the DDS broker uses **NGSI-LD
+on Orion-LD**, a separate broker from the default NGSI-v2 stack, on the same host port `1026`;
+(2) ⚠️ a topic whose **leaf segment is exactly `status`** is not delivered by Orion-LD's DDS module
+(it collides with ROS 2 actions' `status`/`GoalStatusArray`) — **resolved here** by renaming the ROS
+leaf to `status_json` (the FIWARE attribute stays `status`, so NGSI consumers are unaffected). Use
+the **Vulcanexus Docker image** for the ROS 2 side — ARISE fixes Fast DDS as the middleware, and the
+container guarantees that environment without touching a host ROS install.
 
 ```bash
 # default (custom node) — unchanged
@@ -692,8 +701,10 @@ harmony/
 - **Polling latency:** FIWARE → ROS 2 data delivery depends on the polling interval (default 1 s).
   This is acceptable for HRI command signals but is not suitable for high-frequency sensor data.
 - **NGSI-v2 on the default backend:** the custom node (`bridge_backend:=node`) targets the FIWARE
-  NGSI-v2 API. NGSI-LD is available via the optional `bridge_backend:=dds` (Orion-LD) path, but
-  only for `std_msgs/String` topics — see [FIWARE Bridge Backends](#fiware-bridge-backends-custom-node-vs-dds-enabler).
+  NGSI-v2 API. NGSI-LD is available via the optional `bridge_backend:=dds` (Orion-LD) path, which on
+  this branch covers all scalar `std_msgs` types (String/Bool/Int32/…); only the node-only transforms
+  (`value_mapping`, base64) and `custom_interfaces/*` types remain node-only — see
+  [FIWARE Bridge Backends](#fiware-bridge-backends-custom-node-vs-dds-enabler).
 - **Single-attribute polling:** the bridge polls individual attributes per entity. Polling
   efficiency degrades with a large number of mapped attributes.
 - **Gesture classes are task-specific:** the MediaPipe gesture recogniser is trained on
@@ -731,8 +742,11 @@ harmony/
 - ROS 2 bag file replay as a substitute for live sensor data (planned but not tested).
 
 **Future work:**
-- Extend the **DDS backend** to cover non-`String` topics (the `Bool`/`Int32` M5Stack inputs
-  currently stay on the node path), and validate it as the primary backend for the demonstrator.
+- ✅ **Done (this branch):** the **DDS backend** now covers non-`String` topics — `Bool`/`Int32`
+  M5Stack inputs and the renamed `status_json` topic all round-trip over DDS (see
+  [`dds_full_integration_plan.md`](./ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/docs/dds_full_integration_plan.md)).
+  Remaining: validate it as the *primary* backend for the full demonstrator (currently the custom
+  node stays the default).
 - Bring NGSI-LD (`@context`-aware payloads) to the custom node backend as well, for parity with
   the DDS path.
 - Integrate `hri_body_detect` (PAL Robotics) to publish ROS4HRI-compliant `/humans/bodies/*`
