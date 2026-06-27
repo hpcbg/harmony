@@ -8,10 +8,25 @@
     },
     "ngsild": {
       "topics": {
-        "rt/system_skill_pick_and_place/status": {
+        "rt/system_skill_pick_and_place/status_json": {
           "entityType": "Status",
           "entityId": "urn:ngsi-ld:Status:SystemSkillPickAndPlace",
           "attribute": "status"
+        },
+        "rt/user_inputs/start_button": {
+          "entityType": "M5Stick",
+          "entityId": "urn:ngsi-ld:M5Stick:001",
+          "attribute": "buttonBlue"
+        },
+        "rt/user_inputs/stop_button": {
+          "entityType": "M5Stick",
+          "entityId": "urn:ngsi-ld:M5Stick:001",
+          "attribute": "buttonRed"
+        },
+        "rt/angle": {
+          "entityType": "M5Stick",
+          "entityId": "urn:ngsi-ld:M5Stick:001",
+          "attribute": "angle"
         },
         "rt/user_inputs/voice_command": {
           "entityType": "VoiceCommand",

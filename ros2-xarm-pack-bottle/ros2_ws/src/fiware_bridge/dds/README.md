@@ -26,19 +26,30 @@ unless you explicitly opt in.
 
 ## Scope / constraints
 
-- **`std_msgs/String` only.** The generic DDS bridge surfaces a String topic as
-  `.<attribute>.value.data`. `Bool`/`Int32`/`custom_interfaces/*` topics (e.g.
-  the M5Stack buttons) are **not** representable here and stay on the node path.
+> **Branch note (`dds-full-integration`):** this branch extends the DDS path from
+> *String-only* to **all scalar `std_msgs` types**. See
+> [`../docs/dds_full_integration_plan.md`](../docs/dds_full_integration_plan.md) for the
+> per-class strategy and validation. `shareable-modules` keeps the conservative
+> String-only scope in [`../docs/bridge_inventory.md`](../docs/bridge_inventory.md).
+
+- **Scalar `std_msgs` types** (`String`/`Bool`/`Int32`/`Int64`/`Float32`/`Float64`).
+  The bridge maps each via DDS dynamic-type discovery as `.<attribute>.value.data`
+  (String→JSON string, Bool→JSON bool, Int→JSON number — all validated). Only
+  `custom_interfaces/*` and actions stay off the DDS path.
+- **Node-only transforms are not reproduced.** `value_mapping` (`"ON"→true`) and
+  `decode_base64` do not exist on the DDS path — wire **native** values upstream
+  (e.g. PATCH a real boolean, not `"ON"`). `generate_config.py` flags any topic that
+  still declares these.
 - **`rt/` prefix:** ROS 2 `/foo/bar` ⇄ DDS `rt/foo/bar`.
 - **`ROS_DOMAIN_ID` must equal `domain`** in the config (both default to `0`).
 - Run `curl` from the **host** (the broker uses host networking).
 - Do **not** run this at the same time as the default
   `fiware-analytics-docker` stack — both bind host port `1026`.
 - ⚠️ **Reserved leaf name `status`:** a topic whose final segment is exactly `status`
-  (e.g. `rt/system_skill_pick_and_place/status`) is **not** delivered by Orion-LD's DDS
-  module — it collides with ROS 2 actions' `status`/`GoalStatusArray` handling. Use a
-  different leaf (e.g. `status_json`) or keep that topic on the node backend. See
-  [`../docs/bridge_inventory.md`](../docs/bridge_inventory.md).
+  is **not** delivered by Orion-LD's DDS module — it collides with ROS 2 actions'
+  `status`/`GoalStatusArray` handling. **Resolved on this branch** by renaming the ROS
+  leaf to `status_json` (the FIWARE attribute stays `status`, so NGSI consumers are
+  unaffected). See [`../docs/bridge_inventory.md`](../docs/bridge_inventory.md).
 
 ## ROS 2 environment — use the Vulcanexus Docker image
 
@@ -53,11 +64,14 @@ use it. A plain ROS 2 Jazzy install on the host works too (same RMW), but is not
 Validated end-to-end on this machine against `fiware/orion-ld:1.13.0-PRE-1835`, publishing from
 `eprosima/vulcanexus:jazzy-desktop`:
 
-| Topic | ROS 2 → FIWARE | FIWARE → ROS 2 (PATCH) |
-|---|---|---|
-| `/user_inputs/voice_command` | ✅ `PICK` → entity | ✅ |
-| `/user_inputs/gesture_command` | ✅ | ✅ `CAP_PLACED` → subscriber |
-| `/system_skill_pick_and_place/status` | ❌ blocked by reserved `status` leaf (stays on node backend) | — |
+| Topic | Type | ROS 2 → FIWARE | FIWARE → ROS 2 (PATCH) |
+|---|---|---|---|
+| `/user_inputs/voice_command` | String | ✅ `PICK` → entity | ✅ |
+| `/user_inputs/gesture_command` | String | ✅ | ✅ `CAP_PLACED` → subscriber |
+| `/angle` | Int32 | ✅ `137` | ✅ `270` |
+| `/user_inputs/start_button` | Bool | ✅ `true` | ✅ `true` |
+| `/user_inputs/stop_button` | Bool | ✅ (≡ start_button) | ✅ |
+| `/system_skill_pick_and_place/status_json` | String | ✅ `PICKING` | ✅ `DONE` |
 
 ---
 

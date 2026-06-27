@@ -10,22 +10,20 @@ polling_interval: 1.0
 
 # FIWARE to ROS2 mappings (read from FIWARE -> publish to ROS2)
 fiware_to_ros:
+  # NOTE (dds-full-integration branch): these two buttons are aligned to the
+  # topics their real consumer actually subscribes to
+  # (task_pack_bottle.py -> /user_inputs/{start,stop}_button) so the bridge
+  # output reaches the behaviour tree on BOTH backends. `value_mapping` is
+  # dropped: the DDS bridge cannot reproduce it, so this branch standardises on
+  # NATIVE booleans end-to-end (upstream writes a real bool, not "ON"/"OFF").
   - fiware_entity: "M5Stick:001"
     fiware_attribute: "buttonBlue"
-    ros_topic: "/start_button"
+    ros_topic: "/user_inputs/start_button"
     ros_msg_type: "std_msgs/Bool"
-    # Value mapping (optional)
-    value_mapping:
-      "ON": true
-      "OFF": false
-      "1": true
-      "0": false
-      "pressed": true
-      "released": false
 
   - fiware_entity: "M5Stick:001"
     fiware_attribute: "buttonRed"
-    ros_topic: "/stop_button"
+    ros_topic: "/user_inputs/stop_button"
     ros_msg_type: "std_msgs/Bool"
 
   - fiware_entity: "M5Stick:001"
@@ -45,7 +43,15 @@ fiware_to_ros:
 
 # ROS2 to FIWARE mappings (read from ROS2 -> publish to FIWARE)
 ros_to_fiware:
-  - ros_topic: "/system_skill_pick_and_place/status"
+  # NOTE (dds-full-integration branch): the ROS topic LEAF is `status_json`, not
+  # `status`. Orion-LD's DDS module reserves the leaf `status` (collides with ROS 2
+  # action `status`/`action_msgs/GoalStatusArray`), so a DDS topic ending in
+  # `/status` never bridges. Renaming the leaf to `status_json` makes the DDS topic
+  # `rt/system_skill_pick_and_place/status_json`, which bridges normally. The FIWARE
+  # attribute stays `status`, so NGSI consumers (e.g. dashboards) are unaffected.
+  # No in-repo node publishes this topic (it is a demonstrator/harmony-dev signal);
+  # the producing skill node there must publish on the `status_json` leaf.
+  - ros_topic: "/system_skill_pick_and_place/status_json"
     ros_msg_type: "std_msgs/String"
     fiware_entity: "SystemSkillPickAndPlace"
     fiware_entity_type: "Status"

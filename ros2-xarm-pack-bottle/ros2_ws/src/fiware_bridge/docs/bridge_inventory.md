@@ -1,5 +1,11 @@
 # FIWARE Bridge Topic Inventory (Phase 1)
 
+> **On branch `dds-full-integration`** the DDS path has been extended from the
+> *String-only* scope documented here to **all scalar `std_msgs` types** (Bool/Int32/…)
+> plus the `status_json` leaf fix — see
+> [`dds_full_integration_plan.md`](dds_full_integration_plan.md). This file reflects the
+> conservative, D4-deliverable scope frozen on `shareable-modules`.
+
 > Source of truth: `fiware_bridge/config/bridge_config.yaml` (the sample config that
 > ships with the package). The demonstrator's runtime config
 > (`ros2_ws/config/fiware_bridge_config.yaml`, referenced by `complete.launch.py`) is
