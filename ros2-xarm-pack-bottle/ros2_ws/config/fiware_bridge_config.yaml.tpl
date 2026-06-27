@@ -27,6 +27,9 @@ fiware_to_ros:
     ros_topic: "/user_inputs/gesture_command"
     ros_msg_type: "std_msgs/String"
 
+  # NODE-BACKEND ONLY: base64 payload. The Orion-LD DDS bridge has no decode step,
+  # so on bridge_backend:=dds this would deliver an undecoded blob. generate_config.py
+  # excludes it from the DDS mapping; it works only on bridge_backend:=node.
   - fiware_entity: "BottleDetectionJob:processor-01"
     fiware_attribute: "json"
     ros_topic: "/bottle_detection/job_json"
@@ -34,7 +37,12 @@ fiware_to_ros:
     decode_base64: true
 
 ros_to_fiware:
-  - ros_topic: "/task_pack_bottle/status"
+  # Leaf is `status_json`, not `status`: Orion-LD's DDS module reserves the `status`
+  # leaf (collides with ROS 2 action GoalStatusArray), so a DDS topic ending in
+  # `/status` never bridges. The producer (task_pack_bottle.py) publishes on
+  # `/task_pack_bottle/status_json`; the FIWARE attribute stays `status`, so NGSI
+  # consumers are unaffected. Works on both backends.
+  - ros_topic: "/task_pack_bottle/status_json"
     ros_msg_type: "std_msgs/String"
     fiware_entity: "task_pack_bottle"
     fiware_entity_type: "Status"

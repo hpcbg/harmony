@@ -230,10 +230,10 @@ module. All custom message types are defined in the `custom_interfaces` package.
 | Input → ROS 2 | `/user_inputs/start_button` | `std_msgs/Bool` | Blue button pressed (M5Stack) |
 | Input → ROS 2 | `/user_inputs/stop_button` | `std_msgs/Bool` | Red button pressed (M5Stack) |
 | Perception | `/bottle_detection/command` | `std_msgs/String` | Command sent to AI detector |
-| Perception | `/bottle_detection/job_json` | `std_msgs/String` | Detection result JSON |
-| Skill | `/system_skill_pick_and_place/status` | `std_msgs/String` | Pick-and-place skill status |
+| Perception | `/bottle_detection/job_json` | `std_msgs/String` | Detection result JSON (base64; **node backend only** — DDS can't decode) |
+| Skill | `/system_skill_pick_and_place/status_json` | `std_msgs/String` | Pick-and-place skill status (`status_json` leaf bridges on DDS) |
 | Task | `/task_pack_bottle/stage` | `std_msgs/String` | Current behaviour-tree stage |
-| Task | `/task_pack_bottle/status` | `std_msgs/String` | Overall task status |
+| Task | `/task_pack_bottle/status_json` | `std_msgs/String` | Overall task status (`status_json` leaf bridges on DDS) |
 | Arm | `/xarm_pack_bottle/pick` | `std_msgs/String` | Arm pick action trigger |
 | Arm | `/xarm_pack_bottle/fill` | `std_msgs/String` | Arm fill action trigger |
 | Arm | `/xarm_pack_bottle/cap` | `std_msgs/String` | Arm cap action trigger |

@@ -11,8 +11,10 @@ topics (String/Bool/Int32/Int64/Float32/Float64) are emitted — the generic DDS
 bridge maps each via DDS dynamic-type discovery as `.<attribute>.value.data`
 (String->JSON string, Bool->JSON bool, Int->JSON number; validated end-to-end).
 Non-`std_msgs` types (`custom_interfaces/*`) are not representable and stay on the
-node backend. Node-only transforms (`value_mapping`/`decode_base64`) are not
-reproduced on the DDS path — affected topics are emitted but flagged. See
+node backend. Topics that cannot work on DDS are EXCLUDED (not emitted as dead
+mappings): `decode_base64` payloads (arrive undecoded) and any topic whose leaf is
+the reserved `status` (rename to `status_json`). `value_mapping` topics are emitted
+but flagged (they work if native values are written upstream). See
 `docs/dds_full_integration_plan.md` and `docs/bridge_inventory.md`.
 
 Topic-name rule: ROS 2 `/<a>/<b>`  ->  DDS `rt/<a>/<b>`.
@@ -48,9 +50,20 @@ ELIGIBLE_STD_MSGS = {
     'std_msgs/Float64',
 }
 
-# Node-only transforms the DDS bridge cannot reproduce; topics using these are
-# still emitted but flagged so the DDS path is wired with NATIVE values upstream.
-NODE_ONLY_TRANSFORM_KEYS = ('value_mapping', 'decode_base64')
+# Transforms the DDS bridge cannot reproduce, split by severity:
+#  - DDS_INCOMPATIBLE: the payload itself can't survive the DDS path (a base64
+#    blob would arrive undecoded), so the topic is EXCLUDED from the DDS mapping
+#    and stays node-only. Emitting it would be silently-wrong config.
+#  - DDS_FLAGGED: only the *value representation* differs (`value_mapping` just
+#    rewrites values); the DDS path works if native values are written upstream,
+#    so the topic is emitted but flagged.
+DDS_INCOMPATIBLE_KEYS = ('decode_base64',)
+DDS_FLAGGED_KEYS = ('value_mapping',)
+
+# Orion-LD's DDS module reserves the topic leaf `status` (collides with ROS 2
+# action `status`/`action_msgs/GoalStatusArray`); such a topic never bridges, so
+# it is excluded with a rename hint rather than emitted as a dead mapping.
+RESERVED_LEAF = 'status'
 
 
 def ngsild_ids(entity_id, entity_type):
@@ -58,12 +71,17 @@ def ngsild_ids(entity_id, entity_type):
 
     - If an explicit type is given (ros_to_fiware has `fiware_entity_type`),
       use it and prefix the whole id:  Status + SystemSkillPickAndPlace
-      -> urn:ngsi-ld:Status:SystemSkillPickAndPlace
+      -> urn:ngsi-ld:Status:SystemSkillPickAndPlace.
+      But if the id is ALREADY in `Type:instance` form whose prefix equals that
+      type, don't double it:  BottleDetectionJob + BottleDetectionJob:processor-01
+      -> urn:ngsi-ld:BottleDetectionJob:processor-01 (not :BottleDetectionJob:...).
     - Otherwise derive the type from the id's own prefix (the part before the
       first ':'):  VoiceCommand:operator-1 -> type VoiceCommand,
       urn:ngsi-ld:VoiceCommand:operator-1
     """
     if entity_type:
+        if entity_id.split(':', 1)[0] == entity_type:
+            return entity_type, f"urn:ngsi-ld:{entity_id}"
         return entity_type, f"urn:ngsi-ld:{entity_type}:{entity_id}"
     etype = entity_id.split(':', 1)[0]
     return etype, f"urn:ngsi-ld:{entity_id}"
@@ -84,16 +102,29 @@ def build_topics(cfg):
         if msg_type not in ELIGIBLE_STD_MSGS:
             skipped.append((ros_topic, msg_type, direction))
             return
+        blockers = [k for k in DDS_INCOMPATIBLE_KEYS if mapping.get(k)]
+        if blockers:
+            skipped.append(
+                (ros_topic, f"{msg_type}, {'+'.join(blockers)} (node-only)",
+                 direction))
+            return
+        dt = dds_topic(ros_topic)
+        if dt.rsplit('/', 1)[-1] == RESERVED_LEAF:
+            skipped.append(
+                (ros_topic,
+                 f"{msg_type}, reserved '{RESERVED_LEAF}' leaf — rename to "
+                 f"'{RESERVED_LEAF}_json'", direction))
+            return
         entity_type, urn = ngsild_ids(
             mapping['fiware_entity'], mapping.get('fiware_entity_type'))
-        topics[dds_topic(ros_topic)] = {
+        topics[dt] = {
             'entityType': entity_type,
             'entityId': urn,
             'attribute': mapping['fiware_attribute'],
         }
-        used = [k for k in NODE_ONLY_TRANSFORM_KEYS if k in mapping]
-        if used:
-            transform_warnings.append((ros_topic, msg_type, used))
+        flagged = [k for k in DDS_FLAGGED_KEYS if k in mapping]
+        if flagged:
+            transform_warnings.append((ros_topic, msg_type, flagged))
 
     for m in cfg.get('ros_to_fiware', []):
         add(m, 'pub->FIWARE')

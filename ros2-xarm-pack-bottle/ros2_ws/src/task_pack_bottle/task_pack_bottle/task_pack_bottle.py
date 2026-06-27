@@ -56,8 +56,11 @@ class ReportStatus(py_trees.behaviour.Behaviour):
 
     def setup(self, **kwargs):
         self.node = kwargs['node']
+        # Leaf is `status_json` (not `status`): Orion-LD's DDS bridge reserves the
+        # `status` leaf, so this name lets the topic bridge on bridge_backend:=dds
+        # too. The FIWARE attribute stays `status` (see fiware_bridge config).
         self.status_publisher = self.node.create_publisher(
-            String, '/task_pack_bottle/status', 1)
+            String, '/task_pack_bottle/status_json', 1)
 
     def update(self):
         msg = String()
