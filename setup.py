@@ -370,9 +370,12 @@ def select_components() -> set:
 
         if not val:
             break
-        if val == "a" or "A":
+        # `val` is already .strip().lower()'d above, so == is case-insensitive
+        # (A/N work). The previous `val == "a" or "A"` was always truthy and
+        # forced "select all" on every keystroke, killing toggle and N.
+        if val == "a":
             selected = {key for key, _ in ALL_COMPONENTS}
-        elif val == "n" or "N":
+        elif val == "n":
             selected = set()
         else:
             try:
@@ -625,6 +628,30 @@ def setup_ros2(cfg: dict):
         dst_bridge.write_text(content)
         ok(f"Written: {dst_bridge.relative_to(SCRIPT_DIR)}")
 
+    # FIWARE bridge backend: custom node (default) vs ARISE-native DDS enabler.
+    # Both are driven by the same bridge_config.yaml just written, so they never
+    # drift; the DDS mapping is generated from it on demand.
+    backend_idx = ask_choice(
+        "FIWARE bridge backend",
+        ["node — custom Python bridge over NGSI-v2 (default; full type + value-mapping coverage)",
+         "dds  — Orion-LD built-in DDS enabler, NGSI-LD (ARISE-native; all scalar std_msgs)"],
+        default=0)
+    backend = "dds" if backend_idx == 1 else "node"
+    cfg["bridge_backend"] = backend
+
+    if backend == "dds":
+        dds_dir = (SCRIPT_DIR / "ros2-xarm-pack-bottle" / "ros2_ws" / "src"
+                   / "fiware_bridge" / "dds")
+        info("Generating DDS mapping (context_broker_config.json) from bridge_config.yaml...")
+        if run_cmd(["python3", "generate_config.py"], cwd=dds_dir):
+            ok("DDS mapping generated — review the eligibility/transform notes above")
+        else:
+            warn("generate_config.py failed — ensure pyyaml is installed (pip install pyyaml)")
+        warn("DDS Orion-LD and the default Orion stack both bind host port 1026 — "
+             "do not run the 'fiware' analytics stack and the DDS broker at the same time.")
+        info("Start the DDS broker:  cd ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/dds "
+             "&& docker compose -f docker-compose.dds.yml up -d")
+
     if not ros_available:
         warn("Skipping colcon build — install ROS 2 Jazzy first")
         return
@@ -674,7 +701,13 @@ def print_install_summary(components: set, cfg: dict):
     if "gesture"   in components: rows.append(("Gesture",      "source venv/bin/activate && cd gesture-commands-fiware && python gesture-commands-fiware.py"))
     if "voice"     in components: rows.append(("Voice",        "source venv/bin/activate && cd voice-commands-fiware && python voice-commands-fiware.py --fiware"))
     if "dashboard" in components: rows.append(("Dashboard",    "cd react-dashboard && ./run.sh"))
-    if "ros2"      in components: rows.append(("ROS 2",        "cd ros2-xarm-pack-bottle && ./run.sh"))
+    if "ros2"      in components:
+        backend = cfg.get("bridge_backend", "node")
+        if backend == "dds":
+            rows.append(("FIWARE DDS",  "cd ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/dds && docker compose -f docker-compose.dds.yml up -d"))
+            rows.append(("ROS 2",       "cd ros2-xarm-pack-bottle && ./run.sh   # launch with bridge_backend:=dds"))
+        else:
+            rows.append(("ROS 2",       "cd ros2-xarm-pack-bottle && ./run.sh"))
     if "iot"       in components: rows.append(("IoT Firmware", "Flash with Arduino IDE 2.3.6"))
 
     if rows:
