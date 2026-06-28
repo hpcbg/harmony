@@ -23,6 +23,11 @@
           "entityId": "urn:ngsi-ld:BottleDetectionJob:processor-01",
           "attribute": "command"
         },
+        "rt/bottle_detection/status_json": {
+          "entityType": "BottleDetectionJob",
+          "entityId": "urn:ngsi-ld:BottleDetectionJob:processor-01",
+          "attribute": "status"
+        },
         "rt/task_pack_bottle/stage": {
           "entityType": "TaskPackBottle",
           "entityId": "urn:ngsi-ld:TaskPackBottle:operator-01",

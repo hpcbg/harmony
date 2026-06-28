@@ -63,6 +63,18 @@ ros_to_fiware:
     fiware_attribute: "command"
     ros_field: "data"
 
+  # DDS-native AI detector first step (AI_BACKEND=ros2): the detector publishes a
+  # simple status string on `/bottle_detection/status_json` (leaf is `status_json`,
+  # not the reserved `status` leaf). Maps to BottleDetectionJob:processor-01.status.
+  # Full result JSON / image URLs / base64 / pick pose are NOT migrated yet and stay
+  # on the NGSI-v2 backend.
+  - ros_topic: "/bottle_detection/status_json"
+    ros_msg_type: "std_msgs/String"
+    fiware_entity: "BottleDetectionJob:processor-01"
+    fiware_entity_type: "BottleDetectionJob"
+    fiware_attribute: "status"
+    ros_field: "data"
+
   - ros_topic: "/task_pack_bottle/stage"
     ros_msg_type: "std_msgs/String"
     fiware_entity: "TaskPackBottle:operator-01"
