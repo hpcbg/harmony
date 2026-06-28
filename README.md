@@ -658,6 +658,47 @@ Pack bottle operation in idustrial setup:
 > conservative so the multimodal HRI (voice, gesture, IoT button) is clearly visible; they are not
 > indicative of the cell's achievable cycle-time performance.
 
+### Experimental DDS-native validation
+
+> **Scope:** this is an exploratory path on the **`dds-full-integration` branch only**. The full
+> dashboard demonstrator above is unchanged and still runs over the **custom node bridge / NGSI-v2**.
+
+On `dds-full-integration` the voice, gesture and AI-detector modules each gained an experimental
+**`ros2` backend** (selected with `VOICE_BACKEND=ros2`, `GESTURE_BACKEND=ros2`, `AI_BACKEND=ros2`).
+Instead of posting NGSI-v2 entities over HTTP, they publish `std_msgs/String` on ROS 2 topics; an
+Orion-LD broker started with `-wip dds` maps those DDS topics directly to NGSI-LD — no custom bridge
+node and no NGSI-v2 `/v2` calls (so no HTTP 501 from the `-mongocOnly` DDS broker).
+
+The end-to-end path (voice keyword, gesture state, and AI-detector status) is validated through
+**ROS 2 → DDS → Orion-LD** by the top-level script:
+
+```bash
+./validate_dds_native_demo.sh
+```
+
+It checks/starts the DDS Orion-LD broker, runs each module's no-mic/no-camera self-test
+(`TEST_KEYWORD` / `TEST_GESTURE` / `TEST_DETECTION_COMMAND`), confirms the message reached the ROS 2
+topic, and queries the mapped NGSI-LD entity — clearly reporting whether each Orion-LD value is
+**real** or still **`"uninitialized"`**:
+
+| Module | ROS 2 topic | NGSI-LD entity (attribute) |
+|---|---|---|
+| Voice (`VOICE_BACKEND=ros2`) | `/user_inputs/voice_command` | `urn:ngsi-ld:VoiceCommand:operator-1` (`command`) |
+| Gesture (`GESTURE_BACKEND=ros2`) | `/user_inputs/gesture_command` | `urn:ngsi-ld:GestureDetector:operator-1` (`command`) |
+| AI detector (`AI_BACKEND=ros2`) | `/bottle_detection/status_json` | `urn:ngsi-ld:BottleDetectionJob:processor-01` (`status`) |
+
+The script deliberately does **not** start any NGSI-v2 component (FastAPI detector service, React
+dashboard, standard Orion / QuantumLeap / Crate / Grafana) and does **not** touch
+`launch_pack_bottle.sh`.
+
+> **Recommended ARISE runtime — Vulcanexus.** The FIWARE DDS Enabler only fills an NGSI-LD value
+> once the publisher propagates the `std_msgs::msg::dds_::String_` TypeObject. Plain ROS 2 Jazzy
+> publishes the topic (the ROS 2 topic check passes) but does not reliably propagate the type, so the
+> Orion-LD value can stay `"uninitialized"`. Run the DDS-native validation under **Vulcanexus Jazzy
+> (the Vulcanexus Docker image is the recommended ARISE validation runtime)** for reliable type
+> propagation and real Orion-LD values. See
+> [`ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/dds/README.md`](ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/dds/README.md).
+
 ### Reuse for cylindrical objects — pick fixtures
 
 The module is **task-agnostic**: swap the vision model and the YAML topic/entity mapping and it
