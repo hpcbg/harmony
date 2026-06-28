@@ -699,6 +699,16 @@ dashboard, standard Orion / QuantumLeap / Crate / Grafana) and does **not** touc
 > propagation and real Orion-LD values. See
 > [`ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/dds/README.md`](ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/dds/README.md).
 
+To run the validation inside the Vulcanexus Docker image (recommended), use the wrapper:
+
+```bash
+./run_vulcanexus_dds_validation.sh
+```
+
+It ensures the DDS Orion-LD broker is up on the host, then runs `validate_dds_native_demo.sh` inside
+`eprosima/vulcanexus:jazzy-desktop` with host networking + host IPC (so DDS and Orion-LD discovery
+work). Under Vulcanexus the mapped Orion-LD values come back **real** rather than `"uninitialized"`.
+
 ### Reuse for cylindrical objects — pick fixtures
 
 The module is **task-agnostic**: swap the vision model and the YAML topic/entity mapping and it
