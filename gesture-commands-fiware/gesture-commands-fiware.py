@@ -49,6 +49,14 @@ Dependencies:
 
 On first run the MediaPipe hand landmark model (~9 MB) is auto-downloaded.
 
+Backends (GESTURE_BACKEND environment variable):
+    GESTURE_BACKEND=fiware_v2  (default)     → FIWARE Orion over NGSI-v2 (/v2/entities)
+    GESTURE_BACKEND=ros2       (experimental)→ ROS 2 topic /user_inputs/gesture_command
+                                               (std_msgs/String); Orion-LD's -wip dds
+                                               bridge maps it to NGSI-LD. No /v2 calls.
+    TEST_GESTURE="SIDE_GRIP"   → no-camera self-test: publish the gesture(s) through
+                                 the selected backend and exit (no OpenCV/MediaPipe).
+
 Usage:
     python bottle_gesture_detector.py
     python bottle_gesture_detector.py --no-fiware   # run detector only
@@ -63,12 +71,41 @@ import os
 import time
 import urllib.request
 from collections import deque
-import cv2
-import mediapipe as mp
-import numpy as np
-import requests
-from mediapipe.tasks import python as mp_python
-from mediapipe.tasks.python import vision as mp_vision
+
+# Heavy perception deps (camera/landmarking) and the HTTP client are imported
+# softly: the DDS-native ros2 backend and the TEST_GESTURE self-test publish
+# gestures without a camera, OpenCV, MediaPipe or requests, and may run under a
+# sourced ROS 2 / Vulcanexus python that lacks them. They are only required for
+# live webcam detection (cv2/mediapipe/numpy) or the fiware_v2 backend (requests).
+try:
+    import numpy as np
+    _HAS_NUMPY = True
+except ImportError:
+    np = None
+    _HAS_NUMPY = False
+
+try:
+    import cv2
+    _HAS_CV2 = True
+except ImportError:
+    cv2 = None
+    _HAS_CV2 = False
+
+try:
+    import mediapipe as mp
+    from mediapipe.tasks import python as mp_python
+    from mediapipe.tasks.python import vision as mp_vision
+    _HAS_MEDIAPIPE = True
+except ImportError:
+    mp = mp_python = mp_vision = None
+    _HAS_MEDIAPIPE = False
+
+try:
+    import requests
+    _HAS_REQUESTS = True
+except ImportError:
+    requests = None
+    _HAS_REQUESTS = False
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CLI  –  mirrors the constants you'd set in an M5Stick sketch
@@ -219,6 +256,90 @@ class FiwarePublisher:
 
     def close(self):
         self._session.close()
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ROS 2 publisher  (DDS-native experimental backend)  -  GESTURE_BACKEND=ros2
+# ──────────────────────────────────────────────────────────────────────────────
+# Instead of writing NGSI-v2 entities over HTTP, publish each confirmed gesture
+# (NO_HAND / CAP_PLACED / SIDE_GRIP) as a std_msgs/String on the ROS 2 topic
+# /user_inputs/gesture_command. When Orion-LD runs with `-wip dds`, its built-in
+# DDS bridge discovers that topic (DDS name rt/user_inputs/gesture_command) and
+# maps it to the NGSI-LD entity urn:ngsi-ld:GestureDetector:operator-1, attribute
+# `command`. So in this mode the gesture module never touches /v2/entities and
+# never triggers the HTTP 501 the -mongocOnly DDS broker returns for NGSI-v2.
+#
+# Mirrors FiwarePublisher's interface (publish/check_connection/last_ok/close) so
+# the detection loop stays backend-agnostic.
+
+GESTURE_TOPIC = '/user_inputs/gesture_command'
+
+
+class Ros2GesturePublisher:
+    """Publish recognised gestures to a ROS 2 topic (DDS-native path)."""
+
+    def __init__(self, topic=GESTURE_TOPIC):
+        try:
+            import rclpy
+            from std_msgs.msg import String
+        except ImportError:
+            print("[GESTURE] ERROR: ROS 2 (rclpy / std_msgs) not found.")
+            print("          The 'ros2' gesture backend needs a sourced ROS 2 / "
+                  "Vulcanexus workspace, e.g.:")
+            print("            source /opt/vulcanexus/jazzy/setup.bash")
+            print("            source <ws>/install/setup.bash")
+            raise SystemExit(1)
+
+        self._rclpy = rclpy
+        self._String = String
+        self.topic = topic
+        if not rclpy.ok():
+            rclpy.init()
+        self._node = rclpy.create_node('gesture_command_publisher')
+        self._pub = self._node.create_publisher(String, topic, 10)
+        self._last_ok = True
+        print("[GESTURE] ROS 2 backend active")
+
+    def publish(self, state):
+        # Gesture values are published unchanged (NO_HAND / CAP_PLACED / SIDE_GRIP).
+        msg = self._String()
+        msg.data = state
+        self._pub.publish(msg)
+        self._last_ok = True
+        print(f"[GESTURE] published {self.topic}: {state}")
+        return True
+
+    def wait_for_subscribers(self, timeout=5.0):
+        """Spin until at least one subscriber matches (or timeout).
+
+        DDS delivery is best-effort, so a one-shot publish fired before the
+        subscriber (the DDS broker, or `ros2 topic echo`) has finished discovery
+        is silently dropped. The live camera loop never hits this — it streams
+        for minutes — but the TEST_GESTURE self-test does, so wait for a match.
+        """
+        deadline = time.time() + timeout
+        count = self._pub.get_subscription_count()
+        while count == 0 and time.time() < deadline:
+            self._rclpy.spin_once(self._node, timeout_sec=0.1)
+            count = self._pub.get_subscription_count()
+        return count
+
+    def check_connection(self):
+        # rclpy is initialised and the publisher created; nothing to ping.
+        return True
+
+    @property
+    def last_ok(self):
+        return self._last_ok
+
+    def close(self):
+        """Cleanly tear down the node and rclpy (idempotent)."""
+        try:
+            self._node.destroy_node()
+        except Exception:
+            pass
+        if self._rclpy.ok():
+            self._rclpy.shutdown()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -486,14 +607,81 @@ def ensure_model():
 # ──────────────────────────────────────────────────────────────────────────────
 
 def main():
-    ensure_model()
+    # ── select backend ──────────────────────────────────────────────────────
+    # GESTURE_BACKEND=fiware_v2 (default) → publish NGSI-v2 entities to Orion
+    #                                       (the integrated node-bridge demo).
+    # GESTURE_BACKEND=ros2                → publish std_msgs/String to ROS 2 topic
+    #                                       /user_inputs/gesture_command; Orion-LD's
+    #                                       -wip dds bridge maps it to NGSI-LD.
+    backend = os.environ.get('GESTURE_BACKEND', 'fiware_v2').strip().lower()
+    if backend not in ('fiware_v2', 'ros2'):
+        print(f"ERROR: unknown GESTURE_BACKEND='{backend}'. "
+              "Use 'fiware_v2' (default) or 'ros2'.")
+        raise SystemExit(1)
 
-    publisher = FiwarePublisher(
-        broker_url=ARGS.broker,
-        fiware_service=ARGS.fiware_service,
-        fiware_servicepath=ARGS.fiware_servicepath,
-        enabled=not ARGS.no_fiware,
-    )
+    # ── set up publisher ────────────────────────────────────────────────────
+    if backend == 'ros2':
+        publisher = Ros2GesturePublisher()
+        print(f"Backend:   ros2 (DDS-native → {GESTURE_TOPIC})")
+        print("           Orion-LD -wip dds maps this to "
+              "urn:ngsi-ld:GestureDetector:operator-1.command")
+    else:
+        if not ARGS.no_fiware and not _HAS_REQUESTS:
+            print("ERROR: 'requests' is required for the fiware_v2 backend.")
+            print("       Install it with:  pip install requests")
+            raise SystemExit(1)
+        publisher = FiwarePublisher(
+            broker_url=ARGS.broker,
+            fiware_service=ARGS.fiware_service,
+            fiware_servicepath=ARGS.fiware_servicepath,
+            enabled=not ARGS.no_fiware,
+        )
+
+    # ── headless self-test (no camera) ──────────────────────────────────────
+    # TEST_GESTURE pushes gesture(s) through the selected backend without a
+    # camera, OpenCV or MediaPipe, e.g.:
+    #     GESTURE_BACKEND=ros2 TEST_GESTURE=SIDE_GRIP ./run.sh
+    #     GESTURE_BACKEND=ros2 TEST_GESTURE="NO_HAND SIDE_GRIP" ./run.sh
+    test_gesture = os.environ.get('TEST_GESTURE')
+    if test_gesture:
+        states = [s for s in test_gesture.replace(',', ' ').split() if s]
+        valid = {NO_HAND, CAP_PLACED, SIDE_GRIP}
+        unknown = [s for s in states if s not in valid]
+        if unknown:
+            print(f"[TEST] WARNING: unrecognised gesture(s) {unknown}; valid: "
+                  f"{sorted(valid)}. Publishing as given.")
+        print(f"[TEST] no-camera mode — publishing {len(states)} gesture(s): "
+              f"{' '.join(states)}")
+        try:
+            if isinstance(publisher, Ros2GesturePublisher):
+                n = publisher.wait_for_subscribers()
+                if n == 0:
+                    print("[TEST] WARNING: no DDS subscriber matched within timeout "
+                          "— is the DDS broker (or 'ros2 topic echo') running on the "
+                          "same ROS_DOMAIN_ID? Publishing anyway.")
+                else:
+                    print(f"[TEST] {n} DDS subscriber(s) matched.")
+            for s in states:
+                publisher.publish(s)
+                time.sleep(0.5)
+            # give DDS discovery / NGSI write a moment to settle before teardown
+            time.sleep(1.0)
+        finally:
+            publisher.close()
+        return
+
+    # ── live webcam detection ───────────────────────────────────────────────
+    if not (_HAS_CV2 and _HAS_MEDIAPIPE and _HAS_NUMPY):
+        missing = [n for n, ok in (('opencv-python', _HAS_CV2),
+                                   ('mediapipe', _HAS_MEDIAPIPE),
+                                   ('numpy', _HAS_NUMPY)) if not ok]
+        print(f"ERROR: live gesture detection needs: {', '.join(missing)}.")
+        print("       Install them with:  pip install opencv-python mediapipe numpy")
+        print("       (or use TEST_GESTURE=... for a no-camera self-test)")
+        publisher.close()
+        raise SystemExit(1)
+
+    ensure_model()
 
     options = mp_vision.HandLandmarkerOptions(
         base_options=mp_python.BaseOptions(model_asset_path=MODEL_PATH),
@@ -540,14 +728,18 @@ def main():
     pose = None
 
     print("Bottle Capping Gesture Detector")
-    print(
-        f"  Broker:    {ARGS.broker}  ({'disabled' if ARGS.no_fiware else 'enabled'})")
-    print(f"  Service:   {ARGS.fiware_service}  {ARGS.fiware_servicepath}")
-    print(f"  Entity:    {ENTITY_ID}")
+    if backend == 'ros2':
+        print(f"  Backend:   ros2 (DDS-native → {GESTURE_TOPIC})")
+        print(f"  Entity:    {ENTITY_ID}  (mapped by Orion-LD -wip dds)")
+    else:
+        print(
+            f"  Broker:    {ARGS.broker}  ({'disabled' if ARGS.no_fiware else 'enabled'})")
+        print(f"  Service:   {ARGS.fiware_service}  {ARGS.fiware_servicepath}")
+        print(f"  Entity:    {ENTITY_ID}")
     print(f"  Hold time: {CONFIRM_SECONDS:.0f} s")
     print(
         f"  GUI:       {'disabled (headless)' if ARGS.no_gui else 'enabled'}")
-    if not ARGS.no_fiware:
+    if backend == 'fiware_v2' and not ARGS.no_fiware:
         if publisher.check_connection():
             print("  Broker status: reachable")
         else:
