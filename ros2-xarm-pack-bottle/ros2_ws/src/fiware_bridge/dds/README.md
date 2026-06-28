@@ -57,12 +57,23 @@ ARISE fixes **Fast DDS** as the middleware and its examples use
 `eprosima/vulcanexus:jazzy-desktop`. Running the ROS 2 side from that **container**
 (rather than a host ROS install) is the cleaner, ARISE-aligned route: it guarantees the
 intended Vulcanexus/Fast DDS environment and avoids polluting the host. All commands below
-use it. A plain ROS 2 Jazzy install on the host works too (same RMW), but is not required.
+use it.
+
+> ⚠️ **Vulcanexus is required for this path, not just preferred.** A plain ROS 2 Jazzy
+> publisher announces the topic (Orion-LD creates the entity with the right `ddsTypeName`)
+> but does **not** propagate the complete DDS **TypeObject** schema, so the FIWARE DDS
+> Enabler cannot deserialize the payload — its log repeats *"Schema for type
+> `std_msgs::msg::dds_::String_` not available"* and the attribute stays `"uninitialized"`.
+> Publishing/subscribing from the Vulcanexus container propagates the schema and the
+> value flows through. (Confirmed on this machine, 2026-06-28.)
 
 ## Validation status
 
 Validated end-to-end on this machine against `fiware/orion-ld:1.13.0-PRE-1835`, publishing from
-`eprosima/vulcanexus:jazzy-desktop`:
+`eprosima/vulcanexus:jazzy-desktop`. Re-confirmed 2026-06-28 on the deployment mapping (8 topics):
+`/user_inputs/voice_command` `PICK` → `command.value.data` in ~5 s (ROS→FIWARE), and a PATCH of
+`urn:ngsi-ld:GestureDetector:operator-1` `command` delivered `CAP_PLACED`/`SIDE_GRIP` to a
+Vulcanexus subscriber (FIWARE→ROS).
 
 | Topic | Type | ROS 2 → FIWARE | FIWARE → ROS 2 (PATCH) |
 |---|---|---|---|
@@ -84,13 +95,18 @@ cd ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/dds
 python3 generate_config.py        # reads ../config/bridge_config.yaml
 ```
 
-This writes `context_broker_config.json` with the 3 DDS-eligible HARMONY topics:
+This writes `context_broker_config.json` with the 8 DDS-eligible HARMONY topics (all scalar
+`std_msgs`). A few of them, including the two used in the hello world below:
 
 | DDS topic | NGSI-LD entity | attribute | DDS round-trip |
 |---|---|---|---|
 | `rt/user_inputs/voice_command` | `urn:ngsi-ld:VoiceCommand:operator-1` | `command` | ✅ works |
 | `rt/user_inputs/gesture_command` | `urn:ngsi-ld:GestureDetector:operator-1` | `command` | ✅ works |
-| `rt/system_skill_pick_and_place/status` | `urn:ngsi-ld:Status:SystemSkillPickAndPlace` | `status` | ❌ reserved `status` leaf — node backend only |
+| `rt/user_inputs/start_button` | `urn:ngsi-ld:M5Stick:001` | `buttonBlue` (Bool) | ✅ works |
+| `rt/task_pack_bottle/status_json` | `urn:ngsi-ld:Status:task_pack_bottle` | `status` | ✅ works (`status_json` leaf; raw `status` is reserved — node-only) |
+
+The `/bottle_detection/job_json` topic (base64) is excluded from the DDS mapping (node-only);
+`generate_config.py` lists it as skipped.
 
 ### 2. Start the DDS-capable Orion-LD
 
