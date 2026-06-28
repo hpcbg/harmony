@@ -280,13 +280,20 @@ The bridge polls Orion at a configurable interval (default 1 s) using `GET /v2/e
 ### FIWARE Bridge Backends (custom node vs. DDS enabler)
 
 The module ships **two interchangeable bridge backends**, selected at launch with
-`bridge_backend:=node|dds`. The custom node is the **default** because the integrated
-demonstrator (voice/gesture/AI/dashboard/analytics) runs on **NGSI-v2 Orion**, which only the node
-backend targets. The DDS enabler is the ARISE-native opt-in (`bridge_backend:=dds`) — a
-**standalone, bridge-only** path on Orion-LD/NGSI-LD that **cannot coexist** with the NGSI-v2 stack
-(both bind host port 1026), so the NGSI-v2 components don't reach FIWARE when it's active.
+`bridge_backend:=dds|node`. The ARISE-native **DDS enabler is the default** (`bridge_backend:=dds`):
+ROS 2 topics map straight into Orion-LD as NGSI-LD entities with no bridge node. The custom node
+(`bridge_backend:=node`) is the NGSI-v2 alternative for the standard Orion stack.
 
-| | `bridge_backend:=node` (default) | `bridge_backend:=dds` (opt-in) |
+> ⚠️ **DDS-broker-only is bridge-only.** The DDS broker is Orion-LD with `-wip dds -mongocOnly`,
+> which serves **NGSI-LD only** — it returns **HTTP 501** for every NGSI-v2 request
+> (*"Non NGSI-LD requests are not supported with -mongocOnly is set"*), and `-wip dds` requires
+> `-mongocOnly` (without it Orion-LD's legacy mongo driver crashes on modern MongoDB). So the
+> NGSI-v2 demonstrator components — **voice, gesture, AI detector, dashboard, QuantumLeap/Crate/
+> Grafana analytics** — do **not** run against the DDS broker; they need the `node` backend + a
+> standard Orion stack (or an NGSI-LD migration). The DDS path also requires a **Vulcanexus** ROS
+> side (a plain ROS 2 Jazzy publisher doesn't propagate the DDS type schema). Verified 2026-06-28.
+
+| | `bridge_backend:=node` (NGSI-v2 alternative) | `bridge_backend:=dds` (default) |
 |---|---|---|
 | How | Custom Python node (`configurable_fiware_bridge`) over NGSI-v2 HTTP REST | **Orion-LD built-in DDS bridge** (`-wip dds -mongocOnly`) reading `context_broker_config.json` — no custom node runs |
 | API | NGSI-v2 (Orion 3.10.1) | NGSI-LD (Orion-LD) |
@@ -324,15 +331,15 @@ the **Vulcanexus Docker image** for the ROS 2 side — ARISE fixes Fast DDS as t
 container guarantees that environment without touching a host ROS install.
 
 ```bash
-# default (custom node, NGSI-v2; integrated demo on the standard Orion stack)
-ros2 launch fiware_bridge fiware_bridge.launch.py
-
-# ARISE-native DDS enabler (opt-in; node not started, Orion-LD does the bridging).
-# Standalone, bridge-only: replaces the standard Orion stack on port 1026.
+# default (ARISE-native DDS enabler; no node runs, Orion-LD does the bridging).
+# Bridge-only: NGSI-LD broker, needs a Vulcanexus ROS side; NGSI-v2 components don't run here.
 cd ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/dds
 python3 generate_config.py
 docker compose -f docker-compose.dds.yml up -d
-ros2 launch fiware_bridge fiware_bridge.launch.py bridge_backend:=dds
+ros2 launch fiware_bridge fiware_bridge.launch.py            # bridge_backend defaults to dds
+
+# NGSI-v2 custom node (alternative; for the standard Orion stack + integrated demo)
+ros2 launch fiware_bridge fiware_bridge.launch.py bridge_backend:=node
 ```
 
 ### ROS4HRI Alignment
@@ -464,7 +471,10 @@ Expected: JSON response showing Orion version `3.10.1`.
 ```bash
 cd ros2-xarm-pack-bottle/ros2_ws
 source install/setup.bash
-ros2 launch fiware_bridge fiware_bridge.launch.py
+# This hello world uses the standard Orion stack from Step 1, so use the NGSI-v2
+# node backend. (The default backend is now dds; its hello world — Orion-LD DDS
+# broker + Vulcanexus — is in fiware_bridge/dds/README.md.)
+ros2 launch fiware_bridge fiware_bridge.launch.py bridge_backend:=node
 ```
 
 Expected log output:
@@ -717,12 +727,12 @@ harmony/
   dependency.
 - **Polling latency:** FIWARE → ROS 2 data delivery depends on the polling interval (default 1 s).
   This is acceptable for HRI command signals but is not suitable for high-frequency sensor data.
-- **NGSI-v2 on the default backend:** the custom node (`bridge_backend:=node`, default) targets the
-  FIWARE NGSI-v2 API — required for the integrated demonstrator, since voice/gesture/AI/dashboard/
-  analytics are all NGSI-v2. NGSI-LD is available via the opt-in `bridge_backend:=dds` (Orion-LD)
-  path, which covers all scalar `std_msgs` types (String/Bool/Int32/…) but is **standalone and
-  bridge-only** (it replaces the NGSI-v2 stack on port 1026); the node-only transforms
-  (`value_mapping`, base64) and `custom_interfaces/*` types stay node-only — see
+- **DDS-broker-only is bridge-only (default backend):** the default `bridge_backend:=dds` (Orion-LD,
+  NGSI-LD) covers all scalar `std_msgs` types (String/Bool/Int32/…) but the DDS broker serves
+  **NGSI-LD only** — it returns HTTP 501 for NGSI-v2, so the NGSI-v2 demonstrator components
+  (voice/gesture/AI/dashboard/analytics) do **not** run against it, and it needs a **Vulcanexus** ROS
+  side. The `bridge_backend:=node` alternative targets NGSI-v2 (standard Orion) and carries the
+  node-only transforms (`value_mapping`, base64) and `custom_interfaces/*` types — see
   [FIWARE Bridge Backends](#fiware-bridge-backends-custom-node-vs-dds-enabler).
 - **Single-attribute polling:** the bridge polls individual attributes per entity. Polling
   efficiency degrades with a large number of mapped attributes.

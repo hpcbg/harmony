@@ -9,11 +9,12 @@ from launch_ros.actions import Node
 def generate_launch_description():
     pkg_share = FindPackageShare('fiware_bridge').find('fiware_bridge')
 
-    # node (DEFAULT) -> custom fiware_bridge node; dds -> Orion-LD DDS bridge.
+    # dds (DEFAULT) -> Orion-LD built-in DDS bridge (DDS-broker-only architecture);
+    # node -> custom fiware_bridge node (NGSI-v2, for the standard Orion stack).
     bridge_backend_arg = DeclareLaunchArgument(
         'bridge_backend',
-        default_value='node',
-        description="ROS 2 <-> FIWARE bridge backend: 'node' (default) or 'dds'"
+        default_value='dds',
+        description="ROS 2 <-> FIWARE bridge backend: 'dds' (default) or 'node'"
     )
 
     fiware_bridge = IncludeLaunchDescription(

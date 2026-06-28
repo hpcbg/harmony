@@ -685,17 +685,18 @@ def setup_ros2(cfg: dict):
         dst_bridge.write_text(content)
         ok(f"Written: {dst_bridge.relative_to(SCRIPT_DIR)}")
 
-    # FIWARE bridge backend: custom node (default) vs ARISE-native DDS enabler.
-    # node is the integrated-demo default — voice/gesture/AI/dashboard/analytics
-    # all use NGSI-v2 on standard Orion, which only the node backend targets. dds
-    # is a standalone, bridge-only path (Orion-LD/NGSI-LD) that can't coexist with
-    # that stack (same host port 1026). Both read the same fiware_bridge_config.yaml.
+    # FIWARE bridge backend: ARISE-native DDS enabler (default, DDS-broker-only
+    # architecture) vs custom node. The DDS broker (Orion-LD -wip dds -mongocOnly)
+    # serves NGSI-LD ONLY — it returns 501 for NGSI-v2 — so the NGSI-v2 components
+    # (voice/gesture/AI/dashboard/analytics) do NOT run against it; pick 'node' (and
+    # the standard Orion stack) for the integrated demonstrator. Both backends read
+    # the same fiware_bridge_config.yaml.
     backend_idx = ask_choice(
         "FIWARE bridge backend",
-        ["node — custom Python bridge over NGSI-v2 (default; integrated demo, full type + value-mapping coverage)",
-         "dds  — Orion-LD built-in DDS enabler, NGSI-LD (standalone bridge-only; all scalar std_msgs)"],
+        ["dds  — Orion-LD built-in DDS enabler, NGSI-LD (default; all scalar std_msgs, needs Vulcanexus)",
+         "node — custom Python bridge over NGSI-v2 (integrated demo: voice/gesture/AI/dashboard)"],
         default=0)
-    backend = "dds" if backend_idx == 1 else "node"
+    backend = "node" if backend_idx == 1 else "dds"
     cfg["bridge_backend"] = backend
 
     if backend == "dds":
@@ -787,12 +788,12 @@ def print_install_summary(components: set, cfg: dict):
     if "voice"     in components: rows.append(("Voice",        "source venv/bin/activate && cd voice-commands-fiware && python voice-commands-fiware.py --fiware"))
     if "dashboard" in components: rows.append(("Dashboard",    "cd react-dashboard && ./run.sh"))
     if "ros2"      in components:
-        backend = cfg.get("bridge_backend", "node")
+        backend = cfg.get("bridge_backend", "dds")
         if backend == "dds":
-            rows.append(("FIWARE DDS",  "cd ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/dds && docker compose -f docker-compose.dds.yml up -d   # Orion-LD DDS broker (replaces the standard Orion stack)"))
-            rows.append(("ROS 2",       "cd ros2-xarm-pack-bottle && BRIDGE_BACKEND=dds ./run.sh   # standalone bridge-only DDS path"))
+            rows.append(("FIWARE DDS",  "cd ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/dds && docker compose -f docker-compose.dds.yml up -d   # Orion-LD DDS broker (NGSI-LD only; do NOT also run the standard Orion stack)"))
+            rows.append(("ROS 2",       "cd ros2-xarm-pack-bottle && ./run.sh   # dds is the default backend (needs Vulcanexus)"))
         else:
-            rows.append(("ROS 2",       "cd ros2-xarm-pack-bottle && ./run.sh"))
+            rows.append(("ROS 2",       "cd ros2-xarm-pack-bottle && BRIDGE_BACKEND=node ./run.sh   # NGSI-v2 node bridge"))
     if "iot"       in components: rows.append(("IoT Firmware", "Flash with Arduino IDE 2.3.6"))
 
     if rows:

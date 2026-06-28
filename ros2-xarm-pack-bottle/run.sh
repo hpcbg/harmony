@@ -7,8 +7,10 @@ else
     source /opt/ros/jazzy/setup.bash
 fi
 source install/setup.bash
-# Bridge backend defaults to 'node' (NGSI-v2, integrated demonstrator).
-# Opt into the standalone Orion-LD DDS bridge via: BRIDGE_BACKEND=dds ./run.sh
-# (requires the DDS broker up and replaces the standard Orion stack — see dds/README.md).
-ros2 launch ./launch/complete.launch.py bridge_backend:=${BRIDGE_BACKEND:-node}
+# Bridge backend defaults to 'dds' (DDS-broker-only architecture): no node runs,
+# the Orion-LD DDS broker bridges directly. Requires the DDS broker up
+# (docker-compose.dds.yml) and a Vulcanexus ROS side. The DDS broker is NGSI-LD
+# only — the NGSI-v2 components (voice/gesture/AI/dashboard) do not run against it.
+# For the NGSI-v2 node bridge + standard Orion stack: BRIDGE_BACKEND=node ./run.sh
+ros2 launch ./launch/complete.launch.py bridge_backend:=${BRIDGE_BACKEND:-dds}
 cd ..

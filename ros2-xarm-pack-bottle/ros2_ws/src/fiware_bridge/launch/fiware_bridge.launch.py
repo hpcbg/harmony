@@ -20,20 +20,21 @@ def generate_launch_description():
         'bridge_config.yaml'
     ])
 
-    # Bridge backend selector:
-    #   node (DEFAULT) -> launch the custom Python fiware_bridge node (NGSI-v2).
-    #                     Required for the integrated demonstrator: voice/gesture/
-    #                     AI/dashboard/analytics all use NGSI-v2 on standard Orion.
-    #   dds            -> do NOT launch the node; the Orion-LD built-in DDS bridge
-    #                     is expected to be running with the generated
-    #                     fiware_bridge/dds/context_broker_config.json. This is a
-    #                     standalone, bridge-only path (Orion-LD, NGSI-LD) and does
-    #                     NOT coexist with the NGSI-v2 stack (same host port 1026).
+    # Bridge backend selector (DDS-broker-only architecture — dds is the default):
+    #   dds (DEFAULT) -> do NOT launch the node; the Orion-LD built-in DDS bridge
+    #                    does the bridging from the generated
+    #                    fiware_bridge/dds/context_broker_config.json. Requires the
+    #                    DDS broker (docker-compose.dds.yml, -wip dds -mongocOnly) and
+    #                    a Vulcanexus ROS side (schema propagation). NOTE: the DDS
+    #                    broker serves NGSI-LD only — the NGSI-v2 components
+    #                    (voice/gesture/AI/dashboard/analytics) do NOT run against it.
+    #   node          -> launch the custom Python fiware_bridge node (NGSI-v2) for
+    #                    the standard Orion stack + the integrated demonstrator.
     bridge_backend_arg = DeclareLaunchArgument(
         'bridge_backend',
-        default_value='node',
-        description="ROS 2 <-> FIWARE bridge backend: 'node' (custom Python "
-                    "node, NGSI-v2, default) or 'dds' (Orion-LD built-in DDS bridge)"
+        default_value='dds',
+        description="ROS 2 <-> FIWARE bridge backend: 'dds' (Orion-LD built-in DDS "
+                    "bridge, default) or 'node' (custom Python node, NGSI-v2)"
     )
 
     use_node = IfCondition(

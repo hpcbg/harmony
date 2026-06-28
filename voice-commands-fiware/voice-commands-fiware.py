@@ -7,7 +7,13 @@ MIT License — all dependencies (Vosk, SoundDevice, requests) are MIT-licensed.
 Vosk models are Apache 2.0 licensed (compatible with MIT projects).
 
 Architecture:
-    Microphone → Vosk (speech recognition) → FIWARE Orion-LD (NGSI-LD)
+    Microphone → Vosk (speech recognition) → publisher backend
+
+Two backends, selected via the VOICE_BACKEND environment variable:
+    VOICE_BACKEND=fiware_v2  (default)  → FIWARE Orion over NGSI-v2 (/v2/entities)
+    VOICE_BACKEND=ros2       (experimental) → ROS 2 topic /user_inputs/voice_command
+                                              (std_msgs/String); Orion-LD's -wip dds
+                                              bridge maps it to NGSI-LD.
 
 Usage:
     python voice-commands-fiware.py                            # full transcription, English
@@ -44,12 +50,22 @@ import json
 import os
 import queue
 import sys
+import time
 import urllib.request
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-import sounddevice as sd
+# Audio + speech-recognition deps are imported lazily / softly: the DDS-native
+# ros2 backend (and the TEST_KEYWORD self-test) only need to publish keywords and
+# must run under a sourced ROS 2 / Vulcanexus python that may not have vosk or
+# sounddevice (PortAudio). They are only required for actual microphone capture.
+try:
+    import sounddevice as sd
+    _HAS_SOUNDDEVICE = True
+except (ImportError, OSError):
+    sd = None
+    _HAS_SOUNDDEVICE = False
 
 try:
     import requests as _requests
@@ -59,9 +75,10 @@ except ImportError:
 
 try:
     from vosk import KaldiRecognizer, Model
+    _HAS_VOSK = True
 except ImportError:
-    print("Vosk not found. Install it with:  pip install vosk")
-    sys.exit(1)
+    KaldiRecognizer = Model = None
+    _HAS_VOSK = False
 
 
 # ---------------------------------------------------------------------------
@@ -269,6 +286,85 @@ class FiwarePublisher:
 
 
 # ---------------------------------------------------------------------------
+# ROS 2 publisher (DDS-native experimental backend) — VOICE_BACKEND=ros2
+# ---------------------------------------------------------------------------
+# Instead of writing NGSI-v2 entities over HTTP, publish each recognised keyword
+# as a std_msgs/String on the ROS 2 topic /user_inputs/voice_command. When
+# Orion-LD runs with `-wip dds`, its built-in DDS bridge discovers that topic
+# (DDS name rt/user_inputs/voice_command) and maps it to the NGSI-LD entity
+# urn:ngsi-ld:VoiceCommand:operator-1, attribute `command`. So in this mode the
+# voice module never touches /v2/entities and never triggers the HTTP 501 that
+# the -mongocOnly DDS broker returns for NGSI-v2 requests.
+#
+# This class deliberately mirrors FiwarePublisher's interface (publish/
+# check_connection) so the recognition loop stays backend-agnostic.
+
+VOICE_TOPIC = "/user_inputs/voice_command"
+
+
+class Ros2Publisher:
+    """Publish recognised voice keywords to a ROS 2 topic (DDS-native path)."""
+
+    def __init__(self, topic: str = VOICE_TOPIC, verbose: bool = False):
+        try:
+            import rclpy
+            from std_msgs.msg import String
+        except ImportError:
+            print("ERROR: ROS 2 (rclpy / std_msgs) not found.")
+            print("       The 'ros2' voice backend needs a sourced ROS 2 / "
+                  "Vulcanexus workspace, e.g.:")
+            print("         source /opt/vulcanexus/jazzy/setup.bash")
+            print("         source <ws>/install/setup.bash")
+            sys.exit(1)
+
+        self._rclpy = rclpy
+        self._String = String
+        self.topic = topic
+        self.verbose = verbose
+
+        if not rclpy.ok():
+            rclpy.init()
+        self._node = rclpy.create_node("voice_command_publisher")
+        self._pub = self._node.create_publisher(String, topic, 10)
+        print("[VOICE] ROS 2 backend active")
+
+    def publish(self, command: str, confidence: float = 1.0):
+        """Publish the keyword string on the ROS 2 topic."""
+        msg = self._String()
+        msg.data = command.upper()
+        self._pub.publish(msg)
+        print(f"[VOICE] published {self.topic}: {msg.data}")
+
+    def wait_for_subscribers(self, timeout: float = 5.0) -> int:
+        """Spin until at least one subscriber matches (or timeout).
+
+        DDS delivery is best-effort, so a one-shot publish fired before the
+        subscriber (the DDS broker, or `ros2 topic echo`) has finished discovery
+        is silently dropped. The live mic loop never hits this — it streams for
+        minutes — but the TEST_KEYWORD self-test does, so wait for a match first.
+        """
+        deadline = time.time() + timeout
+        count = self._pub.get_subscription_count()
+        while count == 0 and time.time() < deadline:
+            self._rclpy.spin_once(self._node, timeout_sec=0.1)
+            count = self._pub.get_subscription_count()
+        return count
+
+    def check_connection(self) -> bool:
+        # rclpy is initialised and the publisher is created; nothing to ping.
+        return True
+
+    def shutdown(self):
+        """Cleanly tear down the node and rclpy (idempotent)."""
+        try:
+            self._node.destroy_node()
+        except Exception:
+            pass
+        if self._rclpy.ok():
+            self._rclpy.shutdown()
+
+
+# ---------------------------------------------------------------------------
 # Model management
 # ---------------------------------------------------------------------------
 
@@ -330,6 +426,11 @@ def load_model(model_path: str | None, lang: str) -> Model:
 
 def list_microphones():
     """Print available input devices and exit."""
+    if not _HAS_SOUNDDEVICE:
+        print("ERROR: sounddevice / PortAudio not available — cannot list mics.")
+        print("       Install it with:  pip install sounddevice  (and the system")
+        print("       PortAudio lib, e.g.  sudo apt install libportaudio2)")
+        sys.exit(1)
     print("Available microphones:\n")
     devices = sd.query_devices()
     for i, dev in enumerate(devices):
@@ -550,9 +651,22 @@ def main():
         list_microphones()
         return
 
+    # ── select backend ──────────────────────────────────────────────────────
+    # VOICE_BACKEND=fiware_v2 (default) → publish NGSI-v2 entities to Orion (the
+    #                                     integrated node-bridge demo).
+    # VOICE_BACKEND=ros2                → publish std_msgs/String to ROS 2 topic
+    #                                     /user_inputs/voice_command; Orion-LD's
+    #                                     -wip dds bridge maps it to NGSI-LD.
+    backend = os.environ.get("VOICE_BACKEND", "fiware_v2").strip().lower()
+    if backend not in ("fiware_v2", "ros2"):
+        print(f"ERROR: unknown VOICE_BACKEND='{backend}'. "
+              "Use 'fiware_v2' (default) or 'ros2'.")
+        sys.exit(1)
+
     # ── resolve keyword list ────────────────────────────────────────────────
-    # --fiware alone implies --keywords (with defaults)
-    if args.fiware and args.keywords is None:
+    # --fiware (or the ros2 backend) implies --keywords (with defaults)
+    want_publish = args.fiware or backend == "ros2"
+    if want_publish and args.keywords is None:
         args.keywords = []
 
     if args.keywords is not None:
@@ -560,9 +674,19 @@ def main():
     else:
         keywords = None
 
-    # ── set up FIWARE publisher ─────────────────────────────────────────────
-    publisher: FiwarePublisher | None = None
-    if args.fiware:
+    # ── set up publisher ────────────────────────────────────────────────────
+    publisher: "FiwarePublisher | Ros2Publisher | None" = None
+    if backend == "ros2":
+        # DDS-native path: the ros2 backend wins even if --fiware was passed,
+        # so existing launch scripts can switch with just the env var.
+        if keywords is None:
+            print("ERROR: ros2 backend requires keyword mode. Add --keywords.")
+            sys.exit(1)
+        publisher = Ros2Publisher(verbose=args.fiware_verbose)
+        print(f"Backend           : ros2 (DDS-native → {VOICE_TOPIC})")
+        print("                    Orion-LD -wip dds maps this to "
+              "urn:ngsi-ld:VoiceCommand:operator-1.command\n")
+    elif args.fiware:
         if keywords is None:
             print("ERROR: --fiware requires keyword mode. Add --keywords.")
             sys.exit(1)
@@ -573,6 +697,7 @@ def main():
             servicepath=args.servicepath,
             verbose=args.fiware_verbose,
         )
+        print(f"Backend           : fiware_v2 (NGSI-v2 → Orion)")
         print(f"FIWARE broker     : {args.broker}")
         print(f"Fiware-Service    : {args.service}")
         print(f"Fiware-Servicepath: {args.servicepath}")
@@ -581,6 +706,50 @@ def main():
         else:
             print("Broker status : ✘ NOT reachable — detections will be skipped\n"
                   "                (start Orion-LD with:  docker compose up -d)\n")
+
+    # ── headless self-test (no microphone) ──────────────────────────────────
+    # TEST_KEYWORD lets CI / DDS validation push keyword(s) through the selected
+    # backend without audio hardware or a Vosk model, e.g.:
+    #     VOICE_BACKEND=ros2 TEST_KEYWORD=PICK ./run.sh
+    #     VOICE_BACKEND=ros2 TEST_KEYWORD="PICK STOP GO" ./run.sh
+    test_kw = os.environ.get("TEST_KEYWORD")
+    if test_kw:
+        if publisher is None:
+            print("ERROR: TEST_KEYWORD needs a publishing backend "
+                  "(VOICE_BACKEND=ros2, or --fiware for fiware_v2).")
+            sys.exit(1)
+        words = [w for w in test_kw.replace(",", " ").split() if w]
+        print(f"[TEST] no-mic mode — publishing {len(words)} keyword(s): "
+              f"{' '.join(w.upper() for w in words)}")
+        try:
+            if isinstance(publisher, Ros2Publisher):
+                n = publisher.wait_for_subscribers()
+                if n == 0:
+                    print("[TEST] WARNING: no DDS subscriber matched within timeout "
+                          "— is the DDS broker (or 'ros2 topic echo') running on the "
+                          "same ROS_DOMAIN_ID? Publishing anyway.")
+                else:
+                    print(f"[TEST] {n} DDS subscriber(s) matched.")
+            for w in words:
+                publisher.publish(w)
+                time.sleep(0.5)
+            # give DDS discovery / NGSI write a moment to settle before teardown
+            time.sleep(1.0)
+        finally:
+            if isinstance(publisher, Ros2Publisher):
+                publisher.shutdown()
+        return
+
+    # ── live microphone recognition ─────────────────────────────────────────
+    if not _HAS_VOSK:
+        print("ERROR: Vosk not found — needed for microphone recognition.")
+        print("       Install it with:  pip install vosk")
+        sys.exit(1)
+    if not _HAS_SOUNDDEVICE:
+        print("ERROR: sounddevice / PortAudio not available — needed for the mic.")
+        print("       Install it with:  pip install sounddevice  (and the system")
+        print("       PortAudio lib, e.g.  sudo apt install libportaudio2)")
+        sys.exit(1)
 
     model = load_model(args.model, args.lang)
 
@@ -592,6 +761,9 @@ def main():
         print(f"\nAudio error: {exc}")
         print("Try --list-mics to see available devices, then pick one with --mic INDEX")
         sys.exit(1)
+    finally:
+        if isinstance(publisher, Ros2Publisher):
+            publisher.shutdown()
 
 
 if __name__ == "__main__":

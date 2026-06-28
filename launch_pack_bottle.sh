@@ -18,9 +18,13 @@ launch() {
     gnome-terminal --tab --title="$label" -- bash "$tmp"
 }
 
+# Integrated demonstrator: standard Orion (NGSI-v2) + all components + the NGSI-v2
+# node bridge. The standalone fiware_bridge module defaults to dds, but this
+# all-in-one demo is NGSI-v2, so the ROS tab pins BRIDGE_BACKEND=node. (The DDS
+# path is a separate, bridge-only procedure — see fiware_bridge/dds/README.md.)
 launch "Fiware Docker"           "cd fiware-analytics-docker && docker compose up -d"
 launch "React Dashboard"         "cd react-dashboard && . ./run.sh"
 launch "AI Bottle Detector"      "source torch_venv/bin/activate && cd ai-bottle-detector-fiware && . ./run.sh"
 launch "Hand Gesture Detector"   "sleep 5 && source venv/bin/activate && cd gesture-commands-fiware && python gesture-commands-fiware.py --camera $CAMERA"
 launch "Voice Commands Detector" "sleep 5 && source venv/bin/activate && cd voice-commands-fiware && python voice-commands-fiware.py --fiware"
-launch "ROS 2"                   "sleep 20 && cd ros2-xarm-pack-bottle && . ./run.sh"
+launch "ROS 2"                   "sleep 20 && export BRIDGE_BACKEND=node && cd ros2-xarm-pack-bottle && . ./run.sh"
