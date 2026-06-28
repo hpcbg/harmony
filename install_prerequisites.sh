@@ -7,7 +7,7 @@
 # Installs:
 #   • Docker + Docker Compose v2
 #   • Node.js 20 LTS and npm (NodeSource)
-#   • ROS 2 Jazzy (desktop)
+#   • Vulcanexus Jazzy (ROS 2 + Fast DDS, ARISE-aligned; desktop)
 
 set -euo pipefail
 
@@ -115,9 +115,13 @@ check_nodejs() {
     fi
 }
 
-# ─── ROS 2 Jazzy ──────────────────────────────────────────────────────────────
+# ─── Vulcanexus Jazzy (ARISE-aligned ROS 2 / Fast DDS distro) ──────────────────
 
-install_ros2_jazzy() {
+install_vulcanexus_jazzy() {
+    # ARISE fixes Fast DDS as the middleware, so we install Vulcanexus Jazzy
+    # (eProsima's Fast-DDS-aligned ROS 2 distro). It is a superset of ROS 2 Jazzy,
+    # so the custom-node backend builds and runs on it too.
+
     # Step 1 — Locale
     info "Configuring locale..."
     sudo apt install -y locales
@@ -130,49 +134,48 @@ install_ros2_jazzy() {
     sudo apt install -y software-properties-common
     sudo add-apt-repository -y universe
 
-    # Step 3 — ROS 2 apt source package
-    info "Adding ROS 2 apt repository (fetching latest ros-apt-source release)..."
+    # Step 3 — Vulcanexus apt repository (https://docs.vulcanexus.org)
+    info "Adding the Vulcanexus apt repository..."
     sudo apt install -y curl
-    ROS_APT_SOURCE_VERSION=$(
-        curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest \
-        | grep -F "tag_name" | awk -F'"' '{print $4}'
-    )
-    UBUNTU_CODENAME=$(. /etc/os-release && echo "${UBUNTU_CODENAME:-${VERSION_CODENAME}}")
-    DEB_URL="https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.${UBUNTU_CODENAME}_all.deb"
-    curl -L -o /tmp/ros2-apt-source.deb "$DEB_URL"
-    sudo dpkg -i /tmp/ros2-apt-source.deb
+    sudo curl -sSL https://raw.githubusercontent.com/eProsima/vulcanexus/main/vulcanexus.key \
+        -o /usr/share/keyrings/vulcanexus-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/vulcanexus-archive-keyring.gpg] http://repo.vulcanexus.org/debian $(source /etc/os-release && echo "$UBUNTU_CODENAME") main" \
+        | sudo tee /etc/apt/sources.list.d/vulcanexus.list > /dev/null
 
-    # Step 4 — Install ros-jazzy-desktop
+    # Step 4 — Install vulcanexus-jazzy-desktop
     info "Updating package lists..."
     sudo apt update
-    sudo apt upgrade -y
-    info "Installing ros-jazzy-desktop (~1 GB — this may take several minutes)..."
-    sudo apt install -y ros-jazzy-desktop
+    info "Installing vulcanexus-jazzy-desktop (~1 GB — this may take several minutes)..."
+    sudo apt install -y vulcanexus-jazzy-desktop
 
     # Step 5 — Source in .bashrc
-    local setup_line="source /opt/ros/jazzy/setup.bash"
+    local setup_line="source /opt/vulcanexus/jazzy/setup.bash"
     if ! grep -qF "$setup_line" ~/.bashrc; then
         {
             echo ""
-            echo "# ROS 2 Jazzy"
+            echo "# Vulcanexus Jazzy (ROS 2 + Fast DDS)"
             echo "$setup_line"
         } >> ~/.bashrc
         info "Added '$setup_line' to ~/.bashrc"
     fi
 
-    ok "ROS 2 Jazzy installed"
+    ok "Vulcanexus Jazzy installed"
     info "Open a new terminal or run 'source ~/.bashrc' to activate the ROS 2 environment."
 }
 
 check_ros2() {
-    step "ROS 2 Jazzy"
-    if [[ -f /opt/ros/jazzy/setup.bash ]]; then
-        ok "Already installed"
+    step "Vulcanexus Jazzy (ROS 2 + Fast DDS)"
+    if [[ -f /opt/vulcanexus/jazzy/setup.bash ]]; then
+        ok "Already installed (Vulcanexus Jazzy)"
         return
     fi
-    warn "ROS 2 Jazzy not found"
-    if ask_yes_no "Install ROS 2 Jazzy? (~1 GB download)"; then
-        install_ros2_jazzy
+    if [[ -f /opt/ros/jazzy/setup.bash ]]; then
+        ok "Standard ROS 2 Jazzy already installed (Vulcanexus recommended for the DDS path)"
+        return
+    fi
+    warn "Vulcanexus / ROS 2 Jazzy not found"
+    if ask_yes_no "Install Vulcanexus Jazzy? (~1 GB download)"; then
+        install_vulcanexus_jazzy
     else
         warn "Skipped — required for robot control (ROS 2 + xArm)"
     fi
@@ -183,7 +186,7 @@ check_ros2() {
 echo ""
 echo -e "${BOLD}${BLUE}══════════════════════════════════════════════════════════════${RESET}"
 echo -e "${BOLD}${CYAN}  Pack Bottle — Prerequisites Installer${RESET}"
-echo -e "${DIM}  Installs: Docker, Node.js/npm, ROS 2 Jazzy${RESET}"
+echo -e "${DIM}  Installs: Docker, Node.js/npm, Vulcanexus Jazzy (ROS 2 + Fast DDS)${RESET}"
 echo -e "${BOLD}${BLUE}══════════════════════════════════════════════════════════════${RESET}"
 echo ""
 

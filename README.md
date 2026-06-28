@@ -240,9 +240,11 @@ module. All custom message types are defined in the `custom_interfaces` package.
 | Arm | `/xarm_pack_bottle/handover` | `std_msgs/String` | Arm handover action trigger |
 | Arm | `/xarm_pack_bottle/robot_status` | `std_msgs/String` | Robot status feedback |
 
-**ROS 2 distribution:** ROS 2 Jazzy Jalisco (Ubuntu 24.04 Noble). The package is also compatible
-with Vulcanexus (eProsima's ROS 2 distribution used in the ARISE middleware stack), as Vulcanexus
-is a superset of standard ROS 2.
+**ROS 2 distribution:** **Vulcanexus Jazzy** (Ubuntu 24.04 Noble) is the recommended environment —
+ARISE fixes Fast DDS as the middleware, and Vulcanexus is eProsima's Fast-DDS-aligned ROS 2
+distribution used in the ARISE middleware stack. Because Vulcanexus is a superset of standard ROS 2
+Jazzy, the package also builds and runs on a plain ROS 2 Jazzy install (`install_prerequisites.sh`
+installs Vulcanexus; `run.sh` and `setup.py` prefer it and fall back to `/opt/ros/jazzy`).
 
 ### FIWARE / NGSI-v2 Entities
 
@@ -357,8 +359,9 @@ The table below documents the alignment and justifies the gaps:
 | Dependency | Version | Required for | Notes |
 |---|---|---|---|
 | Ubuntu | 24.04 (Noble) | All | Tested OS |
-| ROS 2 Jazzy or Vulcanexus | Jazzy / latest | `fiware_bridge`, ROS 2 nodes | See `install_prerequisites.sh` |
+| Vulcanexus Jazzy (or ROS 2 Jazzy) | Jazzy | `fiware_bridge`, ROS 2 nodes | Vulcanexus recommended (Fast DDS); installed by `install_prerequisites.sh` |
 | Docker + Docker Compose v2 | ≥ 24 / v2 | FIWARE analytics stack | Installed by `install_prerequisites.sh` |
+| Node.js | ≥ 20.19 LTS | React dashboard (Vite 7) | Installed by `install_prerequisites.sh` (NodeSource) |
 | Python | 3.10+ | All Python modules | Bundled with Ubuntu 24.04 |
 | `requests` | ≥ 2.28 | `fiware_bridge` | In `requirements.txt` (`pip install -r requirements.txt`) |
 | `pyyaml` | ≥ 6.0 | `fiware_bridge` | In `requirements.txt` (`pip install -r requirements.txt`) |
@@ -394,13 +397,13 @@ python3 setup.py
 ```
 
 The Setup Assistant calls `install_prerequisites.sh` under the hood for the system-level
-packages (Docker, Node.js, ROS 2 Jazzy). You can also run that script on its own — see
+packages (Docker, Node.js, Vulcanexus Jazzy). You can also run that script on its own — see
 Option B.
 
 ### Option B — Manual installation
 
 **1. System packages.** Run the provided install script to install Docker, Node.js, and
-ROS 2 Jazzy:
+Vulcanexus Jazzy (ROS 2 + Fast DDS):
 
 ```bash
 chmod +x install_prerequisites.sh

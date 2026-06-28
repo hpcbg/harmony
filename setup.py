@@ -40,6 +40,23 @@ def step(title: str):
 SCRIPT_DIR = Path(__file__).parent.resolve()
 STATE_FILE = SCRIPT_DIR / ".setup_state.json"
 
+# ROS 2 environment: ARISE fixes Fast DDS as the middleware, so Vulcanexus Jazzy
+# (eProsima's Fast-DDS-aligned ROS 2 distro) is preferred. It is a superset of
+# ROS 2 Jazzy, so the node backend builds and runs on it too. Fall back to a
+# standard ROS 2 Jazzy install if Vulcanexus is not present.
+ROS_SETUP_CANDIDATES = (
+    "/opt/vulcanexus/jazzy/setup.bash",
+    "/opt/ros/jazzy/setup.bash",
+)
+
+
+def ros_setup_bash():
+    """Path to the ROS 2 setup.bash to source (Vulcanexus preferred), or None."""
+    for path in ROS_SETUP_CANDIDATES:
+        if Path(path).exists():
+            return path
+    return None
+
 
 def load_state() -> dict:
     try:
@@ -429,13 +446,14 @@ def check_prerequisites(components: set) -> bool:
             missing.append("Python 3")
             all_ok = False
 
-    # ROS 2 Jazzy
+    # ROS 2 (Vulcanexus Jazzy preferred, standard ROS 2 Jazzy as fallback)
     if "ros2" in components:
-        if Path("/opt/ros/jazzy/setup.bash").exists():
-            ok("ROS 2 Jazzy")
+        setup_bash = ros_setup_bash()
+        if setup_bash:
+            ok("Vulcanexus Jazzy" if "vulcanexus" in setup_bash else "ROS 2 Jazzy")
         else:
-            warn("ROS 2 Jazzy not found — workspace build will be skipped")
-            missing.append("ROS 2 Jazzy")
+            warn("Vulcanexus / ROS 2 Jazzy not found — workspace build will be skipped")
+            missing.append("Vulcanexus Jazzy")
 
     if missing:
         print(f"\n  {colorize('Missing:', BOLD)} {', '.join(missing)}")
@@ -627,7 +645,8 @@ def setup_dashboard():
 
 def setup_ros2(cfg: dict):
     step("ROS 2 + xArm Configuration")
-    ros_available = Path("/opt/ros/jazzy/setup.bash").exists()
+    ros_setup = ros_setup_bash()
+    ros_available = ros_setup is not None
 
     src_xarm = SCRIPT_DIR / "ros2-xarm-pack-bottle" / "ros2_ws" / "config" / "xarm_pack_bottle.json.tpl"
     dst_xarm = SCRIPT_DIR / "ros2-xarm-pack-bottle" / "ros2_ws" / "config" / "xarm_pack_bottle.json"
@@ -726,7 +745,7 @@ def setup_ros2(cfg: dict):
                  "venv Python — wiping build/install/log for a clean rebuild.")
             for d in ("build", "install", "log"):
                 shutil.rmtree(ws_dir / d, ignore_errors=True)
-        if run_cmd(["bash", "-c", "source /opt/ros/jazzy/setup.bash && colcon build"],
+        if run_cmd(["bash", "-c", f"source {ros_setup} && colcon build"],
                    cwd=ws_dir, env=build_env):
             ok("ROS 2 workspace built")
         else:
