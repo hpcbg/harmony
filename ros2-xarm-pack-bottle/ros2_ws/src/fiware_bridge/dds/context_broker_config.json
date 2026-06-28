@@ -8,10 +8,25 @@
     },
     "ngsild": {
       "topics": {
-        "rt/system_skill_pick_and_place/status_json": {
+        "rt/task_pack_bottle/status_json": {
           "entityType": "Status",
-          "entityId": "urn:ngsi-ld:Status:SystemSkillPickAndPlace",
+          "entityId": "urn:ngsi-ld:Status:task_pack_bottle",
           "attribute": "status"
+        },
+        "rt/xarm_pack_bottle/robot_status": {
+          "entityType": "Status",
+          "entityId": "urn:ngsi-ld:Status:xarm_robot",
+          "attribute": "status"
+        },
+        "rt/bottle_detection/command": {
+          "entityType": "BottleDetectionJob",
+          "entityId": "urn:ngsi-ld:BottleDetectionJob:processor-01",
+          "attribute": "command"
+        },
+        "rt/task_pack_bottle/stage": {
+          "entityType": "TaskPackBottle",
+          "entityId": "urn:ngsi-ld:TaskPackBottle:operator-01",
+          "attribute": "stage"
         },
         "rt/user_inputs/start_button": {
           "entityType": "M5Stick",
@@ -22,11 +37,6 @@
           "entityType": "M5Stick",
           "entityId": "urn:ngsi-ld:M5Stick:001",
           "attribute": "buttonRed"
-        },
-        "rt/angle": {
-          "entityType": "M5Stick",
-          "entityId": "urn:ngsi-ld:M5Stick:001",
-          "attribute": "angle"
         },
         "rt/user_inputs/voice_command": {
           "entityType": "VoiceCommand",

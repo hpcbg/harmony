@@ -6,7 +6,7 @@
 #
 # Installs:
 #   • Docker + Docker Compose v2
-#   • Node.js and npm
+#   • Node.js 20 LTS and npm (NodeSource)
 #   • ROS 2 Jazzy (desktop)
 
 set -euo pipefail
@@ -81,17 +81,35 @@ check_docker() {
 
 # ─── Node.js / npm ────────────────────────────────────────────────────────────
 
+install_node20() {
+    # The React Dashboard uses Vite 7, which requires Node >= 20.19. The version
+    # in Ubuntu 24.04's apt (npm -> Node 18) is too old, so install from NodeSource.
+    command -v curl &>/dev/null || sudo apt install -y curl
+    info "Installing Node.js 20 LTS via NodeSource..."
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    sudo apt install -y nodejs
+    ok "Node.js installed  (node $(node --version), npm $(npm --version))"
+}
+
 check_nodejs() {
-    step "Node.js and npm"
-    if command -v npm &>/dev/null; then
-        ok "Already installed  (npm $(npm --version))"
+    step "Node.js 20 LTS and npm"
+    if command -v node &>/dev/null; then
+        local major; major="$(node --version | sed 's/^v//' | cut -d. -f1)"
+        if [[ "$major" -ge 20 ]]; then
+            ok "Already installed  (node $(node --version), npm $(npm --version))"
+            return
+        fi
+        warn "Node $(node --version) is too old — the React Dashboard (Vite 7) needs Node >= 20.19."
+        if ask_yes_no "Upgrade to Node.js 20 LTS (NodeSource)?"; then
+            install_node20
+        else
+            warn "Skipped — the dashboard dev server will fail with 'crypto.hash is not a function' on Node < 20."
+        fi
         return
     fi
-    warn "npm / Node.js not found"
-    if ask_yes_no "Install Node.js and npm?"; then
-        info "Running: sudo apt install npm"
-        sudo apt install -y npm
-        ok "Node.js and npm installed"
+    warn "Node.js / npm not found"
+    if ask_yes_no "Install Node.js 20 LTS?"; then
+        install_node20
     else
         warn "Skipped — required for the React Dashboard"
     fi

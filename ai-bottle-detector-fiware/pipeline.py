@@ -7,11 +7,17 @@ import torchvision.transforms as T
 from torchvision.models.detection import fasterrcnn_resnet50_fpn
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
+import os
+
 import utils.json_config
 
 CONFIG = utils.json_config.load("config/config.json")
 
+# Resolve a relative MODEL_PATH against this package dir, not the caller's cwd,
+# so the detector finds its weights no matter where it is launched from.
 MODEL_PATH = CONFIG['MODEL_PATH']
+if not os.path.isabs(MODEL_PATH):
+    MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), MODEL_PATH)
 
 NUM_CLASSES = 3
 CONFIDENCE_THRESHOLD = 0.5

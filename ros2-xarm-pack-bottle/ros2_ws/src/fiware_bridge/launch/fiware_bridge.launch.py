@@ -21,15 +21,19 @@ def generate_launch_description():
     ])
 
     # Bridge backend selector:
-    #   node (DEFAULT) -> launch the custom Python fiware_bridge node, as today.
+    #   node (DEFAULT) -> launch the custom Python fiware_bridge node (NGSI-v2).
+    #                     Required for the integrated demonstrator: voice/gesture/
+    #                     AI/dashboard/analytics all use NGSI-v2 on standard Orion.
     #   dds            -> do NOT launch the node; the Orion-LD built-in DDS bridge
     #                     is expected to be running with the generated
-    #                     fiware_bridge/dds/context_broker_config.json.
+    #                     fiware_bridge/dds/context_broker_config.json. This is a
+    #                     standalone, bridge-only path (Orion-LD, NGSI-LD) and does
+    #                     NOT coexist with the NGSI-v2 stack (same host port 1026).
     bridge_backend_arg = DeclareLaunchArgument(
         'bridge_backend',
         default_value='node',
         description="ROS 2 <-> FIWARE bridge backend: 'node' (custom Python "
-                    "node, default) or 'dds' (Orion-LD built-in DDS bridge)"
+                    "node, NGSI-v2, default) or 'dds' (Orion-LD built-in DDS bridge)"
     )
 
     use_node = IfCondition(
@@ -85,8 +89,10 @@ def generate_launch_description():
         msg="bridge_backend:=dds -> custom fiware_bridge node NOT started. "
             "Expecting the Orion-LD built-in DDS bridge to be running "
             "(see fiware_bridge/dds/: docker-compose.dds.yml + "
-            "context_broker_config.json). Only std_msgs/String topics are "
-            "bridged on this path."
+            "context_broker_config.json). All scalar std_msgs topics "
+            "(String/Bool/Int32/...) are bridged on this path. NOTE: this "
+            "replaces the standard NGSI-v2 Orion stack (same port 1026), so the "
+            "NGSI-v2 components (voice/gesture/AI/dashboard) won't reach FIWARE."
     )
 
     return LaunchDescription([

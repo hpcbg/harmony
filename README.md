@@ -278,8 +278,11 @@ The bridge polls Orion at a configurable interval (default 1 s) using `GET /v2/e
 ### FIWARE Bridge Backends (custom node vs. DDS enabler)
 
 The module ships **two interchangeable bridge backends**, selected at launch with
-`bridge_backend:=node|dds`. The custom node is the default; the DDS enabler is the ARISE-native
-opt-in. Existing behaviour is unchanged unless you explicitly choose `dds`.
+`bridge_backend:=node|dds`. The custom node is the **default** because the integrated
+demonstrator (voice/gesture/AI/dashboard/analytics) runs on **NGSI-v2 Orion**, which only the node
+backend targets. The DDS enabler is the ARISE-native opt-in (`bridge_backend:=dds`) — a
+**standalone, bridge-only** path on Orion-LD/NGSI-LD that **cannot coexist** with the NGSI-v2 stack
+(both bind host port 1026), so the NGSI-v2 components don't reach FIWARE when it's active.
 
 | | `bridge_backend:=node` (default) | `bridge_backend:=dds` (opt-in) |
 |---|---|---|
@@ -319,10 +322,11 @@ the **Vulcanexus Docker image** for the ROS 2 side — ARISE fixes Fast DDS as t
 container guarantees that environment without touching a host ROS install.
 
 ```bash
-# default (custom node) — unchanged
+# default (custom node, NGSI-v2; integrated demo on the standard Orion stack)
 ros2 launch fiware_bridge fiware_bridge.launch.py
 
-# ARISE-native DDS enabler (node not started; Orion-LD does the bridging)
+# ARISE-native DDS enabler (opt-in; node not started, Orion-LD does the bridging).
+# Standalone, bridge-only: replaces the standard Orion stack on port 1026.
 cd ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/dds
 python3 generate_config.py
 docker compose -f docker-compose.dds.yml up -d
@@ -520,7 +524,17 @@ so you can verify it is wired in. Running an actual *detection*, however, requir
 PyTorch environment, a camera (or RTSP stream), and trained model weights (`*.pth`, not shipped in
 the repo — see [Known Limitations](#known-limitations)).
 
-**1. Configure.** Copy the template and set your camera ID/URL and model path:
+**1. Get the model weights.** Pre-trained weights live on Hugging Face
+([`hpcbg/harmony-bottle-detector`](https://huggingface.co/hpcbg/harmony-bottle-detector), ~159 MB).
+The setup assistant offers to download them automatically; to fetch manually:
+
+```bash
+mkdir -p ai-bottle-detector-fiware/models
+curl -L -o ai-bottle-detector-fiware/models/best_model.pth \
+  https://huggingface.co/hpcbg/harmony-bottle-detector/resolve/main/best_model.pth
+```
+
+**2. Configure.** Copy the template and set your camera ID/URL and model path:
 
 ```bash
 cd ai-bottle-detector-fiware
@@ -700,10 +714,12 @@ harmony/
   dependency.
 - **Polling latency:** FIWARE → ROS 2 data delivery depends on the polling interval (default 1 s).
   This is acceptable for HRI command signals but is not suitable for high-frequency sensor data.
-- **NGSI-v2 on the default backend:** the custom node (`bridge_backend:=node`) targets the FIWARE
-  NGSI-v2 API. NGSI-LD is available via the optional `bridge_backend:=dds` (Orion-LD) path, which on
-  this branch covers all scalar `std_msgs` types (String/Bool/Int32/…); only the node-only transforms
-  (`value_mapping`, base64) and `custom_interfaces/*` types remain node-only — see
+- **NGSI-v2 on the default backend:** the custom node (`bridge_backend:=node`, default) targets the
+  FIWARE NGSI-v2 API — required for the integrated demonstrator, since voice/gesture/AI/dashboard/
+  analytics are all NGSI-v2. NGSI-LD is available via the opt-in `bridge_backend:=dds` (Orion-LD)
+  path, which covers all scalar `std_msgs` types (String/Bool/Int32/…) but is **standalone and
+  bridge-only** (it replaces the NGSI-v2 stack on port 1026); the node-only transforms
+  (`value_mapping`, base64) and `custom_interfaces/*` types stay node-only — see
   [FIWARE Bridge Backends](#fiware-bridge-backends-custom-node-vs-dds-enabler).
 - **Single-attribute polling:** the bridge polls individual attributes per entity. Polling
   efficiency degrades with a large number of mapped attributes.
@@ -711,8 +727,11 @@ harmony/
   `CAP_PLACED` and `SIDE_GRIP` gestures that are specific to the bottle-cap operation. Reuse
   requires retraining or re-labelling.
 - **Model weights:** the AI detector uses Fast R-CNN weights (PyTorch/torchvision) trained on
-  bottle images. These weights (`*.pth`) are not included in the repository; retraining is
-  required for other object classes. Tools for dataset generation and training are provided.
+  bottle images. These weights (`*.pth`) are not committed to the repository (size); pre-trained
+  bottle weights are published on Hugging Face
+  ([`hpcbg/harmony-bottle-detector`](https://huggingface.co/hpcbg/harmony-bottle-detector)) and the
+  setup assistant can download them. Retraining is required for other object classes; tools for
+  dataset generation and training are provided.
 - **Tested on Ubuntu 24.04 only:** other Linux distributions and Windows/macOS are not tested.
 - **No authentication:** the FIWARE Orion instance runs without authentication in the default
   configuration. Production deployments must add Keyrock/PEP Proxy authentication.

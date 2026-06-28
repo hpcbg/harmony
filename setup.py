@@ -110,10 +110,12 @@ def safe_copy_template(src: Path, dst: Path) -> bool:
     return True
 
 
-def run_cmd(cmd: list, cwd: Path = None, quiet: bool = False) -> bool:
+def run_cmd(cmd: list, cwd: Path = None, quiet: bool = False, env: dict = None) -> bool:
     kwargs: dict = {"cwd": cwd or SCRIPT_DIR}
     if quiet:
         kwargs["capture_output"] = True
+    if env is not None:
+        kwargs["env"] = env
     result = subprocess.run(cmd, **kwargs)
     if result.returncode != 0:
         err(f"Command failed (exit {result.returncode}): {' '.join(str(c) for c in cmd)}")
@@ -131,7 +133,7 @@ STARTUP_SERVICES = [
         "key":      "fiware",
         "label":    "FIWARE Stack (Docker)",
         "checks":   [],   # readiness verified via Docker separately
-        "cmd_tpl":  "cd {root}/fiware-analytics-docker && docker compose stop && docker compose start",
+        "cmd_tpl":  "cd {root}/fiware-analytics-docker && docker compose up -d",
     },
     {
         "key":      "dashboard",
@@ -287,14 +289,14 @@ def mode_startup():
         return
 
     # ── Camera ID (gesture only) ───────────────────────────────────────────────
-    camera = state.get("camera", 4)
+    camera = state.get("camera", 0)
     if "gesture" in selected:
         print()
         camera_str = ask("Camera device ID for gesture recognition", default=str(camera))
         try:
             camera = int(camera_str)
         except ValueError:
-            camera = 4
+            camera = 0
 
     # ── Terminal detection ─────────────────────────────────────────────────────
     terminal = detect_terminal()
@@ -548,10 +550,26 @@ def setup_ai_detector(cfg: dict):
         warn("Skipped — activate torch_venv and pip install torch before running the detector")
 
     model_path = SCRIPT_DIR / "ai-bottle-detector-fiware" / "models" / "best_model.pth"
-    if not model_path.exists():
+    model_url = ("https://huggingface.co/hpcbg/harmony-bottle-detector/"
+                 "resolve/main/best_model.pth")
+    if model_path.exists():
+        ok(f"Model weights present: {model_path.relative_to(SCRIPT_DIR)}")
+    else:
         print()
-        warn("No trained model found at ai-bottle-detector-fiware/models/best_model.pth")
-        info("Train one: python ai-bottle-detector-fiware/utils/train_bottle_detector.py")
+        warn("No trained model at ai-bottle-detector-fiware/models/best_model.pth — "
+             "without it the detector exits with FileNotFoundError.")
+        if ask_yes_no("Download the trained model (~159 MB) from Hugging Face "
+                      "(hpcbg/harmony-bottle-detector)?", default=True):
+            model_path.parent.mkdir(parents=True, exist_ok=True)
+            info("Downloading best_model.pth...")
+            if run_cmd(["curl", "-L", "--fail", "-o", str(model_path), model_url]):
+                ok(f"Model weights downloaded: {model_path.relative_to(SCRIPT_DIR)}")
+            else:
+                warn(f"Download failed — fetch manually from {model_url}")
+        else:
+            info(f"Get the weights later from {model_url}")
+            info("or train your own: python "
+                 "ai-bottle-detector-fiware/utils/train_bottle_detector.py")
 
 
 def setup_gesture_voice(components: set):
@@ -570,6 +588,10 @@ def setup_gesture_voice(components: set):
         ok("Gesture dependencies installed")
 
     if "voice" in components:
+        # sounddevice is a thin wrapper over PortAudio; without the system lib it
+        # imports with "OSError: PortAudio library not found".
+        info("Installing PortAudio system library (sounddevice depends on it)...")
+        run_cmd(["sudo", "apt-get", "install", "-y", "libportaudio2"])
         info("Installing voice requirements...")
         run_cmd([str(pip), "install", "-r",
                  str(SCRIPT_DIR / "voice-commands-fiware" / "requirements.txt")])
@@ -583,6 +605,19 @@ def setup_gesture_voice(components: set):
 def setup_dashboard():
     step("React Dashboard")
     dash_dir = SCRIPT_DIR / "react-dashboard"
+    # Vite 7 / @vitejs/plugin-react 5 require Node >= 20.19. On Node 18 npm install
+    # still succeeds, but the dev server later dies with "crypto.hash is not a
+    # function" — surface that up front instead of as a cryptic runtime crash.
+    try:
+        node_ver = subprocess.run(["node", "--version"], capture_output=True,
+                                  text=True).stdout.strip().lstrip("v")
+        node_major = int(node_ver.split(".")[0]) if node_ver else 0
+    except Exception:
+        node_ver, node_major = "", 0
+    if node_major and node_major < 20:
+        warn(f"Node {node_ver} detected — the dashboard (Vite 7) needs Node >= 20.19.")
+        info("Install Node 20 LTS (e.g. via nvm: 'nvm install 20') before ./run.sh, "
+             "or the dev server will fail with 'crypto.hash is not a function'.")
     info("Running npm install (may take a minute)...")
     if run_cmd(["npm", "install"], cwd=dash_dir):
         ok("Dashboard dependencies installed")
@@ -619,8 +654,11 @@ def setup_ros2(cfg: dict):
 
     src_bridge = (SCRIPT_DIR / "ros2-xarm-pack-bottle" / "ros2_ws"
                   / "config" / "fiware_bridge_config.yaml.tpl")
-    dst_bridge  = (SCRIPT_DIR / "ros2-xarm-pack-bottle" / "ros2_ws" / "src"
-                   / "fiware_bridge" / "config" / "bridge_config.yaml")
+    # complete.launch.py loads './config/fiware_bridge_config.yaml' relative to
+    # ros2_ws, so render the deployment config there (gitignored), NOT into the
+    # tracked sample under src/fiware_bridge/config/.
+    dst_bridge  = (SCRIPT_DIR / "ros2-xarm-pack-bottle" / "ros2_ws"
+                   / "config" / "fiware_bridge_config.yaml")
 
     if safe_copy_template(src_bridge, dst_bridge):
         content = src_bridge.read_text().replace("localhost", cfg["fiware_host"])
@@ -629,12 +667,14 @@ def setup_ros2(cfg: dict):
         ok(f"Written: {dst_bridge.relative_to(SCRIPT_DIR)}")
 
     # FIWARE bridge backend: custom node (default) vs ARISE-native DDS enabler.
-    # Both are driven by the same bridge_config.yaml just written, so they never
-    # drift; the DDS mapping is generated from it on demand.
+    # node is the integrated-demo default — voice/gesture/AI/dashboard/analytics
+    # all use NGSI-v2 on standard Orion, which only the node backend targets. dds
+    # is a standalone, bridge-only path (Orion-LD/NGSI-LD) that can't coexist with
+    # that stack (same host port 1026). Both read the same fiware_bridge_config.yaml.
     backend_idx = ask_choice(
         "FIWARE bridge backend",
-        ["node — custom Python bridge over NGSI-v2 (default; full type + value-mapping coverage)",
-         "dds  — Orion-LD built-in DDS enabler, NGSI-LD (ARISE-native; all scalar std_msgs)"],
+        ["node — custom Python bridge over NGSI-v2 (default; integrated demo, full type + value-mapping coverage)",
+         "dds  — Orion-LD built-in DDS enabler, NGSI-LD (standalone bridge-only; all scalar std_msgs)"],
         default=0)
     backend = "dds" if backend_idx == 1 else "node"
     cfg["bridge_backend"] = backend
@@ -642,8 +682,10 @@ def setup_ros2(cfg: dict):
     if backend == "dds":
         dds_dir = (SCRIPT_DIR / "ros2-xarm-pack-bottle" / "ros2_ws" / "src"
                    / "fiware_bridge" / "dds")
-        info("Generating DDS mapping (context_broker_config.json) from bridge_config.yaml...")
-        if run_cmd(["python3", "generate_config.py"], cwd=dds_dir):
+        info("Generating DDS mapping (context_broker_config.json) from the "
+             "deployment config...")
+        if run_cmd(["python3", "generate_config.py", "--config", str(dst_bridge)],
+                   cwd=dds_dir):
             ok("DDS mapping generated — review the eligibility/transform notes above")
         else:
             warn("generate_config.py failed — ensure pyyaml is installed (pip install pyyaml)")
@@ -661,7 +703,31 @@ def setup_ros2(cfg: dict):
         run_cmd(["sudo", "apt-get", "install", "-y", "ros-jazzy-py-trees"])
         ws_dir = SCRIPT_DIR / "ros2-xarm-pack-bottle" / "ros2_ws"
         info("Running colcon build...")
-        if run_cmd(["bash", "-c", "source /opt/ros/jazzy/setup.bash && colcon build"], cwd=ws_dir):
+        # rosidl (building custom_interfaces) runs under whatever python3 is first
+        # on PATH. If a venv is active it lacks empy/lark and the build dies with
+        # "ModuleNotFoundError: No module named 'em'", aborting the whole workspace.
+        # Build with the system Python that the ROS install provides instead.
+        build_env = os.environ.copy()
+        active_venv = build_env.pop("VIRTUAL_ENV", None)
+        if active_venv:
+            build_env["PATH"] = os.pathsep.join(
+                p for p in build_env.get("PATH", "").split(os.pathsep)
+                if p and not p.startswith(active_venv))
+            info("Active virtualenv detected — building with the system Python "
+                 "(rosidl needs empy/lark from the ROS install, not the venv).")
+        # A prior build done under a venv bakes that python into each package's
+        # CMakeCache.txt, so it keeps failing even once PATH is fixed. Detect a
+        # poisoned cache and wipe the build artifacts for a clean rebuild.
+        build_dir = ws_dir / "build"
+        poisoned = [c for c in build_dir.glob("*/CMakeCache.txt")
+                    if "/venv/" in c.read_text(errors="ignore")]
+        if poisoned:
+            warn(f"Found {len(poisoned)} package(s) whose CMake cache points at a "
+                 "venv Python — wiping build/install/log for a clean rebuild.")
+            for d in ("build", "install", "log"):
+                shutil.rmtree(ws_dir / d, ignore_errors=True)
+        if run_cmd(["bash", "-c", "source /opt/ros/jazzy/setup.bash && colcon build"],
+                   cwd=ws_dir, env=build_env):
             ok("ROS 2 workspace built")
         else:
             warn("colcon build reported errors — check output above")
@@ -696,7 +762,7 @@ def print_install_summary(components: set, cfg: dict):
     host = cfg["fiware_host"]
 
     rows = []
-    if "fiware"    in components: rows.append(("FIWARE",       "cd fiware-analytics-docker && docker compose start"))
+    if "fiware"    in components: rows.append(("FIWARE",       "cd fiware-analytics-docker && docker compose up -d"))
     if "ai"        in components: rows.append(("AI Detector",  "source torch_venv/bin/activate && cd ai-bottle-detector-fiware && ./run.sh"))
     if "gesture"   in components: rows.append(("Gesture",      "source venv/bin/activate && cd gesture-commands-fiware && python gesture-commands-fiware.py"))
     if "voice"     in components: rows.append(("Voice",        "source venv/bin/activate && cd voice-commands-fiware && python voice-commands-fiware.py --fiware"))
@@ -704,8 +770,8 @@ def print_install_summary(components: set, cfg: dict):
     if "ros2"      in components:
         backend = cfg.get("bridge_backend", "node")
         if backend == "dds":
-            rows.append(("FIWARE DDS",  "cd ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/dds && docker compose -f docker-compose.dds.yml up -d"))
-            rows.append(("ROS 2",       "cd ros2-xarm-pack-bottle && ./run.sh   # launch with bridge_backend:=dds"))
+            rows.append(("FIWARE DDS",  "cd ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/dds && docker compose -f docker-compose.dds.yml up -d   # Orion-LD DDS broker (replaces the standard Orion stack)"))
+            rows.append(("ROS 2",       "cd ros2-xarm-pack-bottle && BRIDGE_BACKEND=dds ./run.sh   # standalone bridge-only DDS path"))
         else:
             rows.append(("ROS 2",       "cd ros2-xarm-pack-bottle && ./run.sh"))
     if "iot"       in components: rows.append(("IoT Firmware", "Flash with Arduino IDE 2.3.6"))

@@ -2,7 +2,7 @@
 # Run with: ./launch_pack_bottle.sh --camera=2
 # Default camera is 0 if not specified.
 
-CAMERA=4
+CAMERA=0
 for arg in "$@"; do
     case "$arg" in
         --camera=*) CAMERA="${arg#--camera=}" ;;
@@ -18,7 +18,7 @@ launch() {
     gnome-terminal --tab --title="$label" -- bash "$tmp"
 }
 
-launch "Fiware Docker"           "cd fiware-analytics-docker && docker compose stop && docker compose start"
+launch "Fiware Docker"           "cd fiware-analytics-docker && docker compose up -d"
 launch "React Dashboard"         "cd react-dashboard && . ./run.sh"
 launch "AI Bottle Detector"      "source torch_venv/bin/activate && cd ai-bottle-detector-fiware && . ./run.sh"
 launch "Hand Gesture Detector"   "sleep 5 && source venv/bin/activate && cd gesture-commands-fiware && python gesture-commands-fiware.py --camera $CAMERA"

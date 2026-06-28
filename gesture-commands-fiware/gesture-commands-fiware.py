@@ -506,7 +506,24 @@ def main():
 
     cap = cv2.VideoCapture(ARGS.camera)
     if not cap.isOpened():
-        raise RuntimeError(f"Cannot open webcam (index {ARGS.camera}).")
+        # The requested index may be stale (e.g. a saved --camera value from a
+        # different machine). Probe the low indices and fall back to the first
+        # camera that actually opens instead of failing outright.
+        cap.release()
+        fallback = None
+        for idx in range(10):
+            if idx == ARGS.camera:
+                continue
+            probe = cv2.VideoCapture(idx)
+            if probe.isOpened():
+                cap, fallback = probe, idx
+                break
+            probe.release()
+        if fallback is None:
+            raise RuntimeError(
+                f"Cannot open webcam (index {ARGS.camera}); no camera found on "
+                f"indices 0-9. Pass a valid --camera index.")
+        print(f"[camera] index {ARGS.camera} unavailable — using index {fallback}.")
     cap.set(cv2.CAP_PROP_FRAME_WIDTH,  800)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
 
