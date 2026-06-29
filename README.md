@@ -742,6 +742,18 @@ interpreter (`AI_BACKEND=ros2 AI_DETECTION_MODE=real ./run.sh`). It has been val
 an Orion-LD `command=START` triggering a real Faster R-CNN detection whose bottle count / pick pose /
 result come back **real** in Orion-LD over DDS.
 
+**Behaviour tree consuming DDS-native outputs.** `task_pack_bottle` already publishes its detection
+trigger as `START` on `/bottle_detection/command` (accepted by both detector backends). Its result
+consumer (`BottleDetectorStatus`) is now source-selectable via the `TASK_DETECTOR_SOURCE` env var:
+`job_json` *(default — the NGSI-v2 / node-backend `/bottle_detection/job_json` path, unchanged)* or
+`dds`, which consumes the DDS-native detector's atomic full result on `/bottle_detection/result_json`
+(`status` / `pickPose`; the decomposed `bottle_count` / `pick_pose_json` topics carry the same data).
+The detection decision (DONE + a pick pose → proceed, else retry) is identical for both:
+
+```bash
+TASK_DETECTOR_SOURCE=dds ros2 run task_pack_bottle task_pack_bottle
+```
+
 ### Reuse for cylindrical objects — pick fixtures
 
 The module is **task-agnostic**: swap the vision model and the YAML topic/entity mapping and it

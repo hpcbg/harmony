@@ -101,6 +101,11 @@ Example attribute shapes as returned by Orion-LD:
 > base64 payloads, and the decomposed `pickX`/`pickY`/`pickRotation` floats. On DDS
 > the pose travels as one JSON string in `pickPose`.
 
+The ROS-side consumer of these outputs is the `task_pack_bottle` behaviour tree: with
+`TASK_DETECTOR_SOURCE=dds` it subscribes to the ROS 2 topic `/bottle_detection/result_json`
+(the atomic full result) and drives its pick stage from `status == "DONE"` + `pickPose`.
+The dashboard/backend reads the same data as Orion-LD attributes (table above).
+
 ---
 
 ## Reading entities (curl)

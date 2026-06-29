@@ -1,4 +1,5 @@
 import json
+import os
 import re
 
 import rclpy
@@ -197,10 +198,33 @@ class UserRequestsMonitor(py_trees.behaviour.Behaviour):
 
 
 class BottleDetectorStatus(py_trees.behaviour.Behaviour):
+    """Consume the bottle detector result and drive the DETECT stage.
+
+    Two selectable sources (env ``TASK_DETECTOR_SOURCE``), same decision logic —
+    detection is DONE and a pick pose with an ``x`` is present → DETECT_READY,
+    otherwise back to ACTIVE:
+
+      ``job_json`` *(default)* — the NGSI-v2 / node-backend path: a single
+        base64-decoded job JSON on ``/bottle_detection/job_json``
+        (``{"status": ..., "pick_pose": {...}}``). Behaviour is unchanged.
+
+      ``dds`` — the DDS-native detector (``AI_BACKEND=ros2``) path: the atomic full
+        result on ``/bottle_detection/result_json``
+        (``{"status": ..., "bottleCount": N, "pickPose": {...}, "bottles": [...]}``).
+        The decomposed ``status_json`` / ``bottle_count`` / ``pick_pose_json`` topics
+        carry the same data; the full result is used here so the decision is taken
+        from one atomic message (no cross-topic race).
+
+    The command side is identical for both: RunBottleDetection publishes START on
+    ``/bottle_detection/command``, which both detector backends accept.
+    """
+
     def __init__(self, name, ):
         super().__init__(name)
         self.subscriber = None
         self.node = None
+        self.source = os.environ.get(
+            'TASK_DETECTOR_SOURCE', 'job_json').strip().lower()
         self.blackboard = py_trees.blackboard.Client(name=name)
         self.blackboard.register_key(
             key='stage',
@@ -218,9 +242,30 @@ class BottleDetectorStatus(py_trees.behaviour.Behaviour):
 
     def setup(self, **kwargs):
         self.node = kwargs['node']
-        self.subscriber = self.node.create_subscription(
-            String, '/bottle_detection/job_json', self.callback, 1
-        )
+        if self.source == 'dds':
+            self.subscriber = self.node.create_subscription(
+                String, '/bottle_detection/result_json',
+                self.result_callback, 1
+            )
+            self.node.get_logger().info(
+                'BottleDetectorStatus: DDS-native source '
+                '(/bottle_detection/result_json)')
+        else:
+            self.subscriber = self.node.create_subscription(
+                String, '/bottle_detection/job_json', self.callback, 1
+            )
+
+    def _apply_detection(self, done, pick_pose):
+        """Shared decision: DONE + pose with `x` → DETECT_READY, else ACTIVE."""
+        if not done:
+            return
+        if isinstance(pick_pose, dict) and "x" in pick_pose:
+            self.blackboard.stage = Stages.DETECT_READY
+            self.blackboard.pick_pose = pick_pose
+            self.blackboard.status = "Bottle was detected"
+        else:
+            self.blackboard.stage = Stages.ACTIVE
+            self.blackboard.status = "Bottle was not detected!"
 
     def callback(self, msg):
         if self.blackboard.stage != Stages.DETECT_EXECUTE:
@@ -235,6 +280,13 @@ class BottleDetectorStatus(py_trees.behaviour.Behaviour):
             else:
                 self.blackboard.stage = Stages.ACTIVE
                 self.blackboard.status = "Bottle was not detected!"
+
+    def result_callback(self, msg):
+        if self.blackboard.stage != Stages.DETECT_EXECUTE:
+            return
+        result = json.loads(msg.data)
+        self._apply_detection(
+            result.get("status") == "DONE", result.get("pickPose", {}))
 
     def update(self):
         self.blackboard.status = "Waiting for a bottle to be detected..."
