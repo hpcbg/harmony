@@ -344,8 +344,14 @@ class RunActionAsync(py_trees.behaviour.Behaviour):
         self.action_client = None
         self.node = None
 
+        # Action state — all initialised so update() can never touch an unset
+        # attribute, even if initialise() bailed out early (no action server).
         self.goal_handle = None
+        self.goal_future = None
+        self.result_future = None
         self.result = None
+        self.server_available = False
+        self._warned_unavailable = False
 
         self.blackboard = py_trees.blackboard.Client(name=name)
         self.blackboard.register_key(
@@ -369,11 +375,25 @@ class RunActionAsync(py_trees.behaviour.Behaviour):
 
     def initialise(self):
         self.goal_handle = None
+        self.goal_future = None
+        self.result_future = None
         self.result = None
 
-        if not self.action_client.wait_for_server(timeout_sec=2.0):
+        # No robot / simulation-only validation / late-starting or temporarily
+        # unavailable server: skip gracefully instead of crashing. update() sees
+        # goal_future is None and returns FAILURE; py_trees re-runs initialise()
+        # on the next tick, so a server that comes up later is picked up.
+        self.server_available = self.action_client.wait_for_server(
+            timeout_sec=2.0)
+        if not self.server_available:
+            if not self._warned_unavailable:
+                self.node.get_logger().warning(
+                    f"Action server {self.action_name} unavailable; skipping "
+                    "robot action in no-robot/simulation mode.")
+                self._warned_unavailable = True
             self.blackboard.status = "Action server unavailable!"
             return
+        self._warned_unavailable = False
 
         goal_msg = self.goal_builder(self.blackboard)
         self.goal_future = self.action_client.send_goal_async(
@@ -385,6 +405,12 @@ class RunActionAsync(py_trees.behaviour.Behaviour):
 
     def update(self):
         if self.blackboard.stage == Stages.IDLE:
+            return py_trees.common.Status.FAILURE
+
+        # No goal in flight — the action server was unavailable at initialise()
+        # (no robot / simulation / not up yet). Fail gracefully; the node stays
+        # alive and retries on the next tick.
+        if self.goal_future is None:
             return py_trees.common.Status.FAILURE
 
         if self.goal_handle is None:

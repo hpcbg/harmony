@@ -754,6 +754,21 @@ The detection decision (DONE + a pick pose → proceed, else retry) is identical
 TASK_DETECTOR_SOURCE=dds ros2 run task_pack_bottle task_pack_bottle
 ```
 
+**No-robot / simulation safety.** The robot action wrapper (`RunActionAsync`) tolerates a missing
+xArm action server: if the server is unavailable it logs a single warning
+(`Action server <name> unavailable; skipping robot action in no-robot/simulation mode.`), the action
+**fails gracefully**, and the **node stays alive** — it retries on later ticks, so a late-starting
+server is picked up automatically. With the xArm servers running, behaviour is unchanged. Manual
+check (no robot needed): start the node, drive a detection, and confirm the stage reaches the pick
+step without a traceback:
+
+```bash
+ros2 run task_pack_bottle task_pack_bottle &        # no xArm action servers running
+ros2 topic pub --once /user_inputs/start_button std_msgs/msg/Bool "{data: true}"
+# (or TASK_DETECTOR_SOURCE=dds + a result_json) → stage reaches DETECT_READY / PICK,
+# one "unavailable" warning is logged, and the node keeps ticking (no crash).
+```
+
 ### Reuse for cylindrical objects — pick fixtures
 
 The module is **task-agnostic**: swap the vision model and the YAML topic/entity mapping and it
