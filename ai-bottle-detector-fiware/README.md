@@ -227,6 +227,35 @@ curl -s "http://localhost:1026/ngsi-ld/v1/entities/urn:ngsi-ld:BottleDetectionJo
   -H 'Accept: application/json' | jq '.status'
 ```
 
+### Command flow (Orion-LD → DDS → detector → outputs)
+
+The `command` topic is **inbound** for the detector: Orion-LD is the DDS *writer*,
+so updating the entity's `command` attribute publishes a `std_msgs/String` on
+`rt/bottle_detection/command`, which the running detector (spin mode) receives and
+acts on (`START` → runs detection → emits status/count/pose/result). This is the
+same trigger the dashboard uses, exercised over DDS instead of NGSI-v2.
+
+The command value must be written in `std_msgs/String` DDS form — the value is the
+struct member, `{"value":{"data":"START"}}`. A plain string value does **not**
+propagate to DDS:
+
+```bash
+# detector running long-lived (real subscription, no TEST_* shortcut)
+AI_BACKEND=ros2 ./run.sh &
+
+# trigger START from Orion-LD (NGSI-LD)
+curl -s -X PATCH \
+  "http://localhost:1026/ngsi-ld/v1/entities/urn:ngsi-ld:BottleDetectionJob:processor-01/attrs/command" \
+  -H 'Content-Type: application/json' \
+  -d '{"type":"Property","value":{"data":"START"}}'
+```
+
+The whole round-trip is validated by the top-level `validate_dds_command_flow.sh`
+(run it under Vulcanexus with
+`./run_vulcanexus_dds_validation.sh validate_dds_command_flow.sh`): it starts the
+detector, injects `START` from Orion-LD, and confirms every output topic reacted
+and the mapped NGSI-LD values are real.
+
 ## Other Utilities
 
 There are several helper scripts in the `utils` folder:

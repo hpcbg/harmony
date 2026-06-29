@@ -720,6 +720,18 @@ It ensures the DDS Orion-LD broker is up on the host, then runs `validate_dds_na
 `eprosima/vulcanexus:jazzy-desktop` with host networking + host IPC (so DDS and Orion-LD discovery
 work). Under Vulcanexus the mapped Orion-LD values come back **real** rather than `"uninitialized"`.
 
+**Command flow into the AI detector.** The `validate_dds_native_demo.sh` checks above use each
+module's self-test, which publishes outputs directly. `validate_dds_command_flow.sh` additionally
+validates the real **command path** for the AI detector: it starts the detector long-lived
+(`AI_BACKEND=ros2`), then updates the Orion-LD `command` attribute and confirms it flows
+**Orion-LD → DDS → detector subscription → outputs** (status / bottle count / pick pose / result).
+The command must be written in `std_msgs/String` DDS form (`{"value":{"data":"START"}}`); a plain
+string does not propagate to DDS. The Vulcanexus wrapper takes an optional target script:
+
+```bash
+./run_vulcanexus_dds_validation.sh validate_dds_command_flow.sh
+```
+
 ### Reuse for cylindrical objects — pick fixtures
 
 The module is **task-agnostic**: swap the vision model and the YAML topic/entity mapping and it

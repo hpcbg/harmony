@@ -25,6 +25,15 @@ DDS_DIR="$REPO/ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/dds"
 ORION="${ORION:-http://localhost:1026}"
 ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-0}"
 
+# Which validation to run inside the container. Defaults to the DDS-native demo
+# validation; pass another top-level script, e.g.:
+#     ./run_vulcanexus_dds_validation.sh validate_dds_command_flow.sh
+TARGET="${1:-validate_dds_native_demo.sh}"
+if [ ! -f "$REPO/$TARGET" ]; then
+    echo "[host] ERROR: validation script '$TARGET' not found in $REPO" >&2
+    exit 1
+fi
+
 broker_up() { curl -s --max-time 3 "$ORION/version" 2>/dev/null | grep -qi 'orionld'; }
 
 # ── 1. Ensure the DDS Orion-LD broker is up on the host ──────────────────────
@@ -60,12 +69,13 @@ TTY_FLAG=""
 # ── 3. Run the validation inside Vulcanexus ──────────────────────────────────
 # Mount the repo at the SAME absolute path so realpath-based paths resolve, use
 # host networking + IPC for DDS/Orion discovery, and pin the ROS domain.
-echo "[host] launching $IMAGE (host net + host ipc) ..."
+echo "[host] launching $IMAGE (host net + host ipc) — running ./$TARGET ..."
 exec docker run --rm -i $TTY_FLAG \
     --net=host \
     --ipc=host \
     -e "ROS_DOMAIN_ID=$ROS_DOMAIN_ID" \
     -e "ORION=$ORION" \
+    -e "TARGET=$TARGET" \
     -v "$REPO:$REPO" \
     -w "$REPO" \
     "$IMAGE" \
@@ -77,5 +87,5 @@ exec docker run --rm -i $TTY_FLAG \
             ( cd "$WS" && colcon build ) \
                 || echo "[container] WARN: colcon build failed; continuing (std_msgs-only validation may still work)."
         fi
-        exec ./validate_dds_native_demo.sh
+        exec ./"$TARGET"
     '
