@@ -17,15 +17,37 @@
 # without a camera, GPU, PyTorch, model weights or FIWARE NGSI-v2, e.g.
 #       AI_BACKEND=ros2 TEST_DETECTION_COMMAND=START ./run.sh
 #
+# Real perception (ros2 backend) — same DDS interface, real detector pipeline:
+#       AI_BACKEND=ros2 AI_DETECTION_MODE=real ./run.sh
+#   Real mode needs torch/torchvision/cv2 + model weights; it uses the detector venv
+#   python (torch_venv), which still imports rclpy from the sourced ROS PYTHONPATH.
+#   Override the camera index with AI_CAMERA=<n> (defaults to config/config.json).
+#
 # For the ros2 backend a ROS 2 environment is required. This script sources one
 # automatically (Vulcanexus Jazzy first — the ARISE-compliant choice — then plain
 # ROS 2 Jazzy for local debugging) if rclpy is not already importable.
 
 BACKEND="${AI_BACKEND:-fiware_v2}"
+MODE="${AI_DETECTION_MODE:-stub}"
+HERE="$(cd "$(dirname "$0")" && pwd)"
 
 # Prefer the venv's `python`; fall back to system `python3` (e.g. after sourcing
 # ROS in a plain shell where only python3 exists).
 PY="$(command -v python || command -v python3)"
+
+# Real detection needs torch/torchvision/cv2 (the detector venv) AND rclpy (ROS).
+# The detector venv python (3.12) imports rclpy from the sourced ROS PYTHONPATH, so
+# one interpreter can do both. Use it for AI_DETECTION_MODE=real.
+TORCH_PY="$HERE/../torch_venv/bin/python"
+if [ "$BACKEND" = "ros2" ] && [ "$MODE" = "real" ]; then
+    if [ -x "$TORCH_PY" ]; then
+        PY="$TORCH_PY"
+        echo "[run.sh] real detection mode → detector venv python ($PY)"
+    else
+        echo "[run.sh] WARNING: AI_DETECTION_MODE=real but detector venv not found at"
+        echo "[run.sh]          $TORCH_PY — torch/cv2 may be unimportable; detection will report FAILED."
+    fi
+fi
 
 ros2_ready() { "$PY" -c "import rclpy, std_msgs.msg" 2>/dev/null; }
 
@@ -47,7 +69,11 @@ if [ "$BACKEND" = "ros2" ]; then
         WS_SETUP="../ros2-xarm-pack-bottle/ros2_ws/install/setup.bash"
         # shellcheck disable=SC1090
         [ -f "$WS_SETUP" ] && source "$WS_SETUP"
-        PY="$(command -v python || command -v python3)"
+        # Keep the deliberately-chosen detector venv python in real mode (rclpy now
+        # resolves from the sourced ROS PYTHONPATH); otherwise pick up the ROS python.
+        if [ "$MODE" != "real" ]; then
+            PY="$(command -v python || command -v python3)"
+        fi
     fi
 
     if ! ros2_ready; then

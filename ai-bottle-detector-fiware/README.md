@@ -143,7 +143,7 @@ environment variable:
 | `AI_BACKEND` | Path | Behaviour |
 |---|---|---|
 | `fiware_v2` *(default)* | NGSI-v2 FastAPI service | The full detector — `uvicorn main:app` on `:22001`, camera + PyTorch pipeline, NGSI-v2 subscription/status. **Unchanged.** |
-| `ros2` *(experimental)* | ROS 2 / DDS | A minimal node (`ros2_backend.py`): subscribes `/bottle_detection/command` (accepts `START`) and publishes the detector result, **decomposed into scalar `std_msgs` topics** (status / bottle count / pick pose / full result). No `/v2` calls. |
+| `ros2` *(experimental)* | ROS 2 / DDS | A node (`ros2_backend.py`): subscribes `/bottle_detection/command` (accepts `START`) and publishes the detector result, **decomposed into scalar `std_msgs` topics** (status / bottle count / pick pose / full result). No `/v2` calls. Detection is `stub` or `real` (see `AI_DETECTION_MODE` below). |
 
 ```bash
 ./run.sh                          # default = fiware_v2 (full NGSI-v2 service)
@@ -152,29 +152,52 @@ AI_BACKEND=ros2 ./run.sh          # DDS-native
 
 The `ros2` backend is built **incrementally**: the detector result is migrated to
 DDS one output at a time so the refactor stays controlled and never breaks the
-NGSI-v2 dashboard demo. In `ros2` mode the node does **not** import FastAPI, OpenCV,
-PyTorch, the detection pipeline, the model weights, or the NGSI-v2 client. It
-currently publishes:
+NGSI-v2 dashboard demo. It publishes the result decomposed across these topics:
 
 | ROS 2 topic | Type | Example |
 |---|---|---|
 | `/bottle_detection/status_json` | `std_msgs/String` | `{"status": "PROCESSING"}` → `{"status": "DONE", "bottleCount": 1}` |
 | `/bottle_detection/bottle_count` | `std_msgs/Int32` | `1` |
 | `/bottle_detection/pick_pose_json` | `std_msgs/String` | `{"x": 120.0, "y": -45.0, "rotation": 30.0}` |
-| `/bottle_detection/result_json` | `std_msgs/String` | `{"status": "DONE", "bottleCount": 1, "pickPose": {…}}` |
+| `/bottle_detection/result_json` | `std_msgs/String` | `{"status": "DONE", "bottleCount": 1, "pickPose": {…}, "bottles": [...]}` |
 
-Real frame capture / inference still produce **stub values** here, and the
-processed-image URLs and base64 payloads are **not migrated** — they stay on the
+Processed-image URLs and base64 payloads are **not migrated** — they stay on the
 `fiware_v2` backend. The NGSI-v2 path's decomposed `pickX`/`pickY`/`pickRotation`
 floats are unchanged; the DDS path carries the pose as one JSON string (`pickPose`).
 The existing NGSI-v2 service behaviour is preserved exactly.
+
+### Detection modes — `AI_DETECTION_MODE` (behind the same DDS interface)
+
+The `ros2` backend has two detection modes; **the topics, message types and Orion-LD
+mappings are identical** in both — only the source of the values differs:
+
+| `AI_DETECTION_MODE` | Imports | Behaviour |
+|---|---|---|
+| `stub` *(default)* | rclpy + std_msgs only | No camera/GPU/PyTorch. Emits representative values, for wiring/CI validation. |
+| `real` | + camera.py & pipeline.py (torch, torchvision, cv2, model weights) | Captures a frame and runs the **existing** detector pipeline (Faster R-CNN + ArUco homography), then publishes the real result on the same four topics. |
+
+```bash
+AI_BACKEND=ros2 ./run.sh                       # stub (default)
+AI_BACKEND=ros2 AI_DETECTION_MODE=real ./run.sh   # real perception, same DDS interface
+```
+
+Only `run_detection_stub()` is swapped for the real perception call — `START` still
+triggers it (over DDS or ROS). The heavy deps and the model are imported **lazily**
+on the first real detection, so the stub and self-test paths never need them. Real
+mode requires `torch`/`torchvision`/`cv2` and the weights (`models/best_model.pth`);
+`run.sh` runs it with the **detector venv python** (`../torch_venv`), which can import
+both `rclpy` (from the sourced ROS `PYTHONPATH`) and `torch` in one interpreter.
+Override the camera index with `AI_CAMERA=<n>` (defaults to `config/config.json`’s
+`CAMERA`). If a dependency or the camera is missing, real mode publishes
+`{"status": "FAILED", ...}` instead of crashing.
 
 `run.sh` auto-sources a ROS 2 environment for the `ros2` backend if `rclpy` isn't
 already importable — **Vulcanexus Jazzy first** (ARISE-compliant), then plain ROS 2
 Jazzy as a local-debugging fallback.
 
-**No-camera self-test (`TEST_DETECTION_COMMAND`).** Injects a command without a
-camera, GPU, PyTorch, model weights or FIWARE NGSI-v2:
+**No-camera self-test (`TEST_DETECTION_COMMAND`).** Always the **stub** path (even
+when `AI_DETECTION_MODE=real`), so it needs no camera, GPU, PyTorch, model weights or
+FIWARE NGSI-v2:
 
 ```bash
 AI_BACKEND=ros2 TEST_DETECTION_COMMAND=START ./run.sh
@@ -255,6 +278,20 @@ The whole round-trip is validated by the top-level `validate_dds_command_flow.sh
 `./run_vulcanexus_dds_validation.sh validate_dds_command_flow.sh`): it starts the
 detector, injects `START` from Orion-LD, and confirms every output topic reacted
 and the mapped NGSI-LD values are real.
+
+The same validation can drive **real perception** by exporting `AI_DETECTION_MODE=real`
+(and giving the container the camera device + a longer echo window for model load):
+
+```bash
+docker run --rm -i --net=host --ipc=host --device /dev/video0 --group-add video \
+  -e ROS_DOMAIN_ID=0 -e ORION=http://localhost:1026 \
+  -e AI_DETECTION_MODE=real -e AI_CAMERA=0 -e ECHO_SECS=100 -e READY_WAIT=20 \
+  -v "$PWD:$PWD" -w "$PWD" eprosima/vulcanexus:jazzy-desktop \
+  bash -lc 'source /opt/vulcanexus/jazzy/setup.bash; ./validate_dds_command_flow.sh'
+```
+
+This captures a frame, runs the Faster R-CNN pipeline, and the real bottle count /
+pick pose / result land in Orion-LD over DDS — same topics and mappings as the stub.
 
 ## Other Utilities
 

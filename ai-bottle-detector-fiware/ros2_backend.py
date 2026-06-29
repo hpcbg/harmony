@@ -25,7 +25,19 @@ NOT migrated (kept on the NGSI-v2 backend): processed-image URLs and base64 payl
 The pose here is published as a single JSON string (pick_pose_json); the NGSI-v2 path's
 decomposed pickX/pickY/pickRotation floats are unchanged and stay on that backend.
 
-Self-test (no camera / GPU / PyTorch / model weights / FIWARE NGSI-v2):
+Detection mode (`AI_DETECTION_MODE`), behind the SAME DDS interface:
+    stub *(default)*  — no camera/GPU/PyTorch; emits representative values.
+    real              — captures a frame and runs the existing detector pipeline
+                        (camera.py + pipeline.py: Faster R-CNN + ArUco homography),
+                        then publishes the real result on the same four topics.
+
+Only `run_detection_stub()` is replaced by the real perception call; the topics,
+message types and Orion-LD mappings are unchanged. Real mode needs torch/torchvision/
+cv2 and the model weights, so launch it through run.sh (which uses the detector venv
+python, able to import both rclpy and torch in one interpreter):
+    AI_BACKEND=ros2 AI_DETECTION_MODE=real ./run.sh
+
+Self-test (always the stub / no-camera path, even when AI_DETECTION_MODE=real):
     AI_BACKEND=ros2 TEST_DETECTION_COMMAND=START ./run.sh
 """
 import json
@@ -52,7 +64,10 @@ RESULT_TOPIC = "/bottle_detection/result_json"
 class Ros2DetectorBackend:
     """Minimal ROS 2 node: receive detector commands, publish detector status."""
 
-    def __init__(self):
+    def __init__(self, detection_mode="stub"):
+        self.detection_mode = "real" if detection_mode == "real" else "stub"
+        self._camera = None          # lazily opened in real mode
+        self._process_frame = None   # lazily imported pipeline fn (real mode)
         if not rclpy.ok():
             rclpy.init()
         self._node = rclpy.create_node("bottle_detector_ros2")
@@ -65,6 +80,8 @@ class Ros2DetectorBackend:
         self._sub = self._node.create_subscription(
             String, COMMAND_TOPIC, self._on_command, 10)
         print("[AI] ROS 2 backend active")
+        print(f"[AI] detection mode: {self.detection_mode}"
+              f"{' (camera + pipeline)' if self.detection_mode == 'real' else ' (no camera)'}")
         print(f"[AI] subscribed {COMMAND_TOPIC}  (accepts START)")
         for t in (STATUS_TOPIC, COUNT_TOPIC, PICK_POSE_TOPIC, RESULT_TOPIC):
             print(f"[AI] publishing  {t}")
@@ -118,13 +135,85 @@ class Ros2DetectorBackend:
         self._publish_result(result)
         self._publish_status(status="DONE", bottleCount=bottle_count)
 
+    def _ensure_pipeline(self):
+        """Lazily import the real detector pipeline and open the camera.
+
+        The heavy deps (torch/torchvision/cv2) and the model weights are loaded
+        only the first time real detection runs, so the stub/test paths never need
+        them. `pipeline.process_frame` loads the Faster R-CNN model at import.
+        """
+        if self._process_frame is None:
+            try:
+                from pipeline import process_frame
+            except Exception as e:
+                raise RuntimeError(
+                    "real detection needs the detector pipeline (torch, torchvision, "
+                    "cv2) and the model weights. Launch via run.sh with "
+                    "AI_DETECTION_MODE=real so the detector venv python is used "
+                    f"(import error: {e})")
+            self._process_frame = process_frame
+        if self._camera is None:
+            import utils.json_config
+            from camera import Camera
+            cfg = utils.json_config.load("config/config.json")
+            cam_env = os.environ.get("AI_CAMERA", "").strip()
+            cam_index = int(cam_env) if cam_env else cfg["CAMERA"]
+            print(f"[AI] opening camera {cam_index} …")
+            self._camera = Camera(cam_index, cfg.get("SET_RESOLUTION", False),
+                                  cfg.get("WIDTH", 1600), cfg.get("HEIGHT", 1200))
+
+    def run_detection_real(self):
+        """Real perception behind the same DDS interface.
+
+        Capture one frame and run the existing detector pipeline, then publish the
+        real result on the same four topics. Image URLs / base64 stay on the NGSI-v2
+        backend; only the scalar outputs are bridged over DDS.
+        """
+        self._publish_status(status="CAPTURING")
+        self._ensure_pipeline()
+
+        frame = self._camera.get_frame()
+        deadline = time.time() + 5.0
+        while frame is None and time.time() < deadline:
+            time.sleep(0.1)
+            frame = self._camera.get_frame()
+        if frame is None:
+            raise RuntimeError("no camera frame available")
+
+        self._publish_status(status="PROCESSING")
+        result = self._process_frame(frame.copy())
+        bottles = result.get("bottles") or []
+        pick_pose = result.get("pick_pose") or {}
+        bottle_count = len(bottles)
+
+        self._publish_count(bottle_count)
+        self._publish_pick_pose(pick_pose)
+        self._publish_result({
+            "status": "DONE",
+            "bottleCount": bottle_count,
+            "pickPose": pick_pose,
+            "bottles": bottles,
+        })
+        self._publish_status(status="DONE", bottleCount=bottle_count)
+
+    def run_detection(self):
+        """Dispatch a START to the configured detection mode (stub or real)."""
+        if self.detection_mode == "real":
+            try:
+                self.run_detection_real()
+            except Exception as e:
+                print(f"[AI] real detection FAILED: {e}")
+                self._publish_status(status="FAILED", error=str(e))
+        else:
+            self.run_detection_stub()
+
     # ── subscribing ─────────────────────────────────────────────────────────
     def _on_command(self, msg):
         cmd = (msg.data or "").strip().upper()
         print(f"[AI] received {COMMAND_TOPIC}: {cmd}")
         if cmd == "START":
-            self.run_detection_stub()
-        # Other commands are ignored in this first step.
+            self.run_detection()
+        # Other commands are ignored in this step.
 
     # ── helpers ─────────────────────────────────────────────────────────────
     def wait_for_subscribers(self, timeout=5.0, settle=0.8):
@@ -157,7 +246,13 @@ class Ros2DetectorBackend:
             pass
 
     def close(self):
-        """Cleanly tear down the node and rclpy (idempotent)."""
+        """Cleanly tear down the camera, node and rclpy (idempotent)."""
+        if self._camera is not None:
+            try:
+                self._camera.release()
+            except Exception:
+                pass
+            self._camera = None
         try:
             self._node.destroy_node()
         except Exception:
@@ -167,10 +262,13 @@ class Ros2DetectorBackend:
 
 
 def main():
-    backend = Ros2DetectorBackend()
+    mode = os.environ.get("AI_DETECTION_MODE", "stub").strip().lower()
+    backend = Ros2DetectorBackend(detection_mode=mode)
     test_cmd = os.environ.get("TEST_DETECTION_COMMAND")
     try:
         if test_cmd:
+            # TEST_DETECTION_COMMAND is always the stub / no-camera path, even when
+            # AI_DETECTION_MODE=real, so the self-test never needs a camera or torch.
             cmd = test_cmd.strip().upper()
             print(f"[TEST] no-camera mode — injecting command: {cmd}")
             n = backend.wait_for_subscribers()

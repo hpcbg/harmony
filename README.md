@@ -732,6 +732,16 @@ string does not propagate to DDS. The Vulcanexus wrapper takes an optional targe
 ./run_vulcanexus_dds_validation.sh validate_dds_command_flow.sh
 ```
 
+**Real perception behind the same DDS interface.** The `ros2` AI backend has two detection modes,
+selected with `AI_DETECTION_MODE` — `stub` (default; no camera/PyTorch) and `real`, which runs the
+**existing** detector pipeline (Faster R-CNN + ArUco homography) and publishes the real result on
+**the same four topics with the same Orion-LD mappings**. Only `run_detection_stub()` is swapped for
+the real call; the DDS interface, the NGSI-v2 FastAPI detector, and the dashboard are untouched. Real
+mode uses the detector venv python (`torch_venv`), which imports both `rclpy` and `torch` in one
+interpreter (`AI_BACKEND=ros2 AI_DETECTION_MODE=real ./run.sh`). It has been validated end-to-end —
+an Orion-LD `command=START` triggering a real Faster R-CNN detection whose bottle count / pick pose /
+result come back **real** in Orion-LD over DDS.
+
 ### Reuse for cylindrical objects — pick fixtures
 
 The module is **task-agnostic**: swap the vision model and the YAML topic/entity mapping and it
