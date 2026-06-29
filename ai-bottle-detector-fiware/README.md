@@ -135,7 +135,7 @@ Ypu can request a new bottle detection from the FIWARE with the following comman
 curl -iX PATCH 'http://localhost:1026/v2/entities/BottleDetectionJob:processor-01/attrs'   -H 'Content-Type: application/json'   -H 'fiware-service: openiot'   -H 'fiware-servicepath: /'   -d '{"command": {"type": "Text", "value": "START"}}'
 ```
 
-## Backends — `AI_BACKEND` (DDS-native, experimental first step)
+## Backends — `AI_BACKEND` (DDS-native, experimental)
 
 The detector has two selectable backends, chosen with the `AI_BACKEND`
 environment variable:
@@ -143,19 +143,31 @@ environment variable:
 | `AI_BACKEND` | Path | Behaviour |
 |---|---|---|
 | `fiware_v2` *(default)* | NGSI-v2 FastAPI service | The full detector — `uvicorn main:app` on `:22001`, camera + PyTorch pipeline, NGSI-v2 subscription/status. **Unchanged.** |
-| `ros2` *(experimental)* | ROS 2 / DDS | A minimal node (`ros2_backend.py`): subscribes `/bottle_detection/command` (accepts `START`) and publishes simple status to `/bottle_detection/status_json`. No `/v2` calls. |
+| `ros2` *(experimental)* | ROS 2 / DDS | A minimal node (`ros2_backend.py`): subscribes `/bottle_detection/command` (accepts `START`) and publishes the detector result, **decomposed into scalar `std_msgs` topics** (status / bottle count / pick pose / full result). No `/v2` calls. |
 
 ```bash
 ./run.sh                          # default = fiware_v2 (full NGSI-v2 service)
-AI_BACKEND=ros2 ./run.sh          # DDS-native first step
+AI_BACKEND=ros2 ./run.sh          # DDS-native
 ```
 
-This is **only the first refactoring step**. In `ros2` mode the node does **not**
-import FastAPI, OpenCV, PyTorch, the detection pipeline, the model weights, or the
-NGSI-v2 client, and it publishes only a **simple status** (`{"status": "PROCESSING"}`,
-then `{"status": "DONE", "bottleCount": 0}`). The full result JSON, processed-image
-URLs, base64 payloads and pick pose are **not migrated yet** — they stay on the
-`fiware_v2` backend. The existing NGSI-v2 service behaviour is preserved exactly.
+The `ros2` backend is built **incrementally**: the detector result is migrated to
+DDS one output at a time so the refactor stays controlled and never breaks the
+NGSI-v2 dashboard demo. In `ros2` mode the node does **not** import FastAPI, OpenCV,
+PyTorch, the detection pipeline, the model weights, or the NGSI-v2 client. It
+currently publishes:
+
+| ROS 2 topic | Type | Example |
+|---|---|---|
+| `/bottle_detection/status_json` | `std_msgs/String` | `{"status": "PROCESSING"}` → `{"status": "DONE", "bottleCount": 1}` |
+| `/bottle_detection/bottle_count` | `std_msgs/Int32` | `1` |
+| `/bottle_detection/pick_pose_json` | `std_msgs/String` | `{"x": 120.0, "y": -45.0, "rotation": 30.0}` |
+| `/bottle_detection/result_json` | `std_msgs/String` | `{"status": "DONE", "bottleCount": 1, "pickPose": {…}}` |
+
+Real frame capture / inference still produce **stub values** here, and the
+processed-image URLs and base64 payloads are **not migrated** — they stay on the
+`fiware_v2` backend. The NGSI-v2 path's decomposed `pickX`/`pickY`/`pickRotation`
+floats are unchanged; the DDS path carries the pose as one JSON string (`pickPose`).
+The existing NGSI-v2 service behaviour is preserved exactly.
 
 `run.sh` auto-sources a ROS 2 environment for the `ros2` backend if `rclpy` isn't
 already importable — **Vulcanexus Jazzy first** (ARISE-compliant), then plain ROS 2
@@ -170,14 +182,18 @@ AI_BACKEND=ros2 TEST_DETECTION_COMMAND=START ./run.sh
 
 ### DDS mapping
 
-With Orion-LD started as `-wip dds -mongocOnly`, the status topic is mapped to
-NGSI-LD via `context_broker_config.json`:
+With Orion-LD started as `-wip dds -mongocOnly`, each output topic is mapped to an
+attribute of the same NGSI-LD entity via `context_broker_config.json`:
 
 ```
-rt/bottle_detection/status_json  →  urn:ngsi-ld:BottleDetectionJob:processor-01.status
+rt/bottle_detection/status_json     →  urn:ngsi-ld:BottleDetectionJob:processor-01.status
+rt/bottle_detection/bottle_count    →  urn:ngsi-ld:BottleDetectionJob:processor-01.bottleCount
+rt/bottle_detection/pick_pose_json  →  urn:ngsi-ld:BottleDetectionJob:processor-01.pickPose
+rt/bottle_detection/result_json     →  urn:ngsi-ld:BottleDetectionJob:processor-01.result
 ```
 
-This mapping is generated from the bridge YAML
+`bottle_count` is an `std_msgs/Int32`, so the DDS bridge maps it to a JSON number;
+the String topics map to JSON strings. These mappings are generated from the bridge YAML
 (`../ros2-xarm-pack-bottle/ros2_ws/config/fiware_bridge_config.yaml`,
 `ros_to_fiware`) by `dds/generate_config.py`. The `ros2` backend never calls
 `/v2/entities`, so the `-mongocOnly` DDS broker never returns HTTP 501 to it.

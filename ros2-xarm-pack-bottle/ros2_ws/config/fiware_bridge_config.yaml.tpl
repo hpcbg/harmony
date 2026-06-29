@@ -75,6 +75,34 @@ ros_to_fiware:
     fiware_attribute: "status"
     ros_field: "data"
 
+  # DDS-native AI detector — incremental result decomposition (AI_BACKEND=ros2).
+  # Each detector output is published on its own scalar std_msgs topic and mapped
+  # to an attribute of BottleDetectionJob:processor-01, so it can be validated
+  # end-to-end through Orion-LD one topic at a time. Image URLs / base64 payloads
+  # are NOT migrated and stay on the NGSI-v2 backend. The NGSI-v2 path's decomposed
+  # pickX/pickY/pickRotation floats are unchanged; the DDS path carries the pose as
+  # a single JSON string (pickPose).
+  - ros_topic: "/bottle_detection/bottle_count"
+    ros_msg_type: "std_msgs/Int32"
+    fiware_entity: "BottleDetectionJob:processor-01"
+    fiware_entity_type: "BottleDetectionJob"
+    fiware_attribute: "bottleCount"
+    ros_field: "data"
+
+  - ros_topic: "/bottle_detection/pick_pose_json"
+    ros_msg_type: "std_msgs/String"
+    fiware_entity: "BottleDetectionJob:processor-01"
+    fiware_entity_type: "BottleDetectionJob"
+    fiware_attribute: "pickPose"
+    ros_field: "data"
+
+  - ros_topic: "/bottle_detection/result_json"
+    ros_msg_type: "std_msgs/String"
+    fiware_entity: "BottleDetectionJob:processor-01"
+    fiware_entity_type: "BottleDetectionJob"
+    fiware_attribute: "result"
+    ros_field: "data"
+
   - ros_topic: "/task_pack_bottle/stage"
     ros_msg_type: "std_msgs/String"
     fiware_entity: "TaskPackBottle:operator-01"

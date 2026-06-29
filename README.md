@@ -231,6 +231,10 @@ module. All custom message types are defined in the `custom_interfaces` package.
 | Input → ROS 2 | `/user_inputs/stop_button` | `std_msgs/Bool` | Red button pressed (M5Stack) |
 | Perception | `/bottle_detection/command` | `std_msgs/String` | Command sent to AI detector |
 | Perception | `/bottle_detection/job_json` | `std_msgs/String` | Detection result JSON (base64; **node backend only** — DDS can't decode) |
+| Perception | `/bottle_detection/status_json` | `std_msgs/String` | Detector status (**DDS-native `AI_BACKEND=ros2`**) |
+| Perception | `/bottle_detection/bottle_count` | `std_msgs/Int32` | Detected bottle count (**DDS-native `AI_BACKEND=ros2`**) |
+| Perception | `/bottle_detection/pick_pose_json` | `std_msgs/String` | Pick pose JSON (**DDS-native `AI_BACKEND=ros2`**) |
+| Perception | `/bottle_detection/result_json` | `std_msgs/String` | Full detection result JSON (**DDS-native `AI_BACKEND=ros2`**) |
 | Skill | `/system_skill_pick_and_place/status_json` | `std_msgs/String` | Pick-and-place skill status (`status_json` leaf bridges on DDS) |
 | Task | `/task_pack_bottle/stage` | `std_msgs/String` | Current behaviour-tree stage |
 | Task | `/task_pack_bottle/status_json` | `std_msgs/String` | Overall task status (`status_json` leaf bridges on DDS) |
@@ -665,12 +669,16 @@ Pack bottle operation in idustrial setup:
 
 On `dds-full-integration` the voice, gesture and AI-detector modules each gained an experimental
 **`ros2` backend** (selected with `VOICE_BACKEND=ros2`, `GESTURE_BACKEND=ros2`, `AI_BACKEND=ros2`).
-Instead of posting NGSI-v2 entities over HTTP, they publish `std_msgs/String` on ROS 2 topics; an
-Orion-LD broker started with `-wip dds` maps those DDS topics directly to NGSI-LD — no custom bridge
-node and no NGSI-v2 `/v2` calls (so no HTTP 501 from the `-mongocOnly` DDS broker).
+Instead of posting NGSI-v2 entities over HTTP, they publish scalar `std_msgs` topics (`String`, and
+`Int32` for the bottle count); an Orion-LD broker started with `-wip dds` maps those DDS topics
+directly to NGSI-LD — no custom bridge node and no NGSI-v2 `/v2` calls (so no HTTP 501 from the
+`-mongocOnly` DDS broker). The AI detector's result is migrated **incrementally**, one DDS-native
+output at a time (status, bottle count, pick pose, full result JSON), so the refactor stays
+controlled and never breaks the NGSI-v2 dashboard demo; processed-image URLs and base64 payloads are
+not migrated and stay on the NGSI-v2 backend.
 
-The end-to-end path (voice keyword, gesture state, and AI-detector status) is validated through
-**ROS 2 → DDS → Orion-LD** by the top-level script:
+The end-to-end path (voice keyword, gesture state, and the AI-detector's decomposed outputs) is
+validated through **ROS 2 → DDS → Orion-LD** by the top-level script:
 
 ```bash
 ./validate_dds_native_demo.sh
@@ -686,6 +694,9 @@ topic, and queries the mapped NGSI-LD entity — clearly reporting whether each 
 | Voice (`VOICE_BACKEND=ros2`) | `/user_inputs/voice_command` | `urn:ngsi-ld:VoiceCommand:operator-1` (`command`) |
 | Gesture (`GESTURE_BACKEND=ros2`) | `/user_inputs/gesture_command` | `urn:ngsi-ld:GestureDetector:operator-1` (`command`) |
 | AI detector (`AI_BACKEND=ros2`) | `/bottle_detection/status_json` | `urn:ngsi-ld:BottleDetectionJob:processor-01` (`status`) |
+| AI detector (`AI_BACKEND=ros2`) | `/bottle_detection/bottle_count` (`Int32`) | `urn:ngsi-ld:BottleDetectionJob:processor-01` (`bottleCount`) |
+| AI detector (`AI_BACKEND=ros2`) | `/bottle_detection/pick_pose_json` | `urn:ngsi-ld:BottleDetectionJob:processor-01` (`pickPose`) |
+| AI detector (`AI_BACKEND=ros2`) | `/bottle_detection/result_json` | `urn:ngsi-ld:BottleDetectionJob:processor-01` (`result`) |
 
 The script deliberately does **not** start any NGSI-v2 component (FastAPI detector service, React
 dashboard, standard Orion / QuantumLeap / Crate / Grafana) and does **not** touch

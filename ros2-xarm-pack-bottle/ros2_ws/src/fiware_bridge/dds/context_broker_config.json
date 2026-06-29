@@ -28,6 +28,21 @@
           "entityId": "urn:ngsi-ld:BottleDetectionJob:processor-01",
           "attribute": "status"
         },
+        "rt/bottle_detection/bottle_count": {
+          "entityType": "BottleDetectionJob",
+          "entityId": "urn:ngsi-ld:BottleDetectionJob:processor-01",
+          "attribute": "bottleCount"
+        },
+        "rt/bottle_detection/pick_pose_json": {
+          "entityType": "BottleDetectionJob",
+          "entityId": "urn:ngsi-ld:BottleDetectionJob:processor-01",
+          "attribute": "pickPose"
+        },
+        "rt/bottle_detection/result_json": {
+          "entityType": "BottleDetectionJob",
+          "entityId": "urn:ngsi-ld:BottleDetectionJob:processor-01",
+          "attribute": "result"
+        },
         "rt/task_pack_bottle/stage": {
           "entityType": "TaskPackBottle",
           "entityId": "urn:ngsi-ld:TaskPackBottle:operator-01",

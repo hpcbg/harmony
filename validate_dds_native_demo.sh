@@ -202,11 +202,78 @@ validate_component "3. Gesture (GESTURE_BACKEND=ros2)" \
     "urn:ngsi-ld:GestureDetector:operator-1" "command" \
     GESTURE_BACKEND=ros2 TEST_GESTURE=SIDE_GRIP
 
-validate_component "4. AI detector (AI_BACKEND=ros2)" \
-    "$SCRIPT_DIR/ai-bottle-detector-fiware" \
-    "/bottle_detection/status_json" \
-    "urn:ngsi-ld:BottleDetectionJob:processor-01" "status" \
-    AI_BACKEND=ros2 TEST_DETECTION_COMMAND=START
+# ── helper: AI detector — one self-test, several decomposed DDS-native outputs ─
+# The AI detector publishes its result across several scalar std_msgs topics
+# (status / bottle_count / pick_pose_json / result_json). One ./run.sh run emits
+# them all, so listen on each topic and check each mapped Orion-LD attribute.
+declare -A AI_TOPIC
+declare -A AI_ORION
+validate_ai() {
+    local label="4. AI detector (AI_BACKEND=ros2)"
+    local dir="$SCRIPT_DIR/ai-bottle-detector-fiware"
+    local entity="urn:ngsi-ld:BottleDetectionJob:processor-01"
+    # "ros_topic|echo_msg_type|orion_attr"
+    local specs=(
+        "/bottle_detection/status_json|std_msgs/msg/String|status"
+        "/bottle_detection/bottle_count|std_msgs/msg/Int32|bottleCount"
+        "/bottle_detection/pick_pose_json|std_msgs/msg/String|pickPose"
+        "/bottle_detection/result_json|std_msgs/msg/String|result"
+    )
+
+    head "$label"
+    info "self-test : ( cd $(basename "$dir") && AI_BACKEND=ros2 TEST_DETECTION_COMMAND=START ./run.sh )"
+    info "entity    : $entity"
+
+    # start a listener per output topic, then run the detector self-test once
+    local spec topic mtype attr f
+    declare -A out pids
+    for spec in "${specs[@]}"; do
+        IFS='|' read -r topic mtype attr <<<"$spec"
+        f="$(mktemp)"; out[$topic]="$f"
+        ( timeout "$ECHO_SECS" ros2 topic echo "$topic" "$mtype" > "$f" 2>&1 ) &
+        pids[$topic]=$!
+    done
+    sleep "$DISCOVERY_WAIT"
+
+    ( cd "$dir" && env AI_BACKEND=ros2 TEST_DETECTION_COMMAND=START ./run.sh ) 2>&1 | sed 's/^/      /'
+    for spec in "${specs[@]}"; do
+        IFS='|' read -r topic mtype attr <<<"$spec"
+        wait "${pids[$topic]}" 2>/dev/null
+    done
+
+    for spec in "${specs[@]}"; do
+        IFS='|' read -r topic mtype attr <<<"$spec"
+        f="${out[$topic]}"
+        if grep -q '^data:' "$f"; then
+            local seen; seen="$(grep '^data:' "$f" | tail -1 | sed 's/^data: //')"
+            pass "ROS 2 topic $topic delivered: $seen"
+            AI_TOPIC[$attr]="PASS"
+        else
+            fail "ROS 2 topic $topic: no message received within ${ECHO_SECS}s"
+            AI_TOPIC[$attr]="FAIL"
+            TOPIC_FAILURES=$((TOPIC_FAILURES + 1))
+        fi
+        rm -f "$f"
+
+        local cls; cls="$(orion_classify "$entity" "$attr")"
+        case "$cls" in
+            REAL*)
+                pass "Orion-LD $attr = REAL ${cls#REAL }"
+                AI_ORION[$attr]="REAL ${cls#REAL }" ;;
+            UNINITIALIZED)
+                warn "Orion-LD $attr = \"uninitialized\" (mapped, value not propagated)"
+                [ "$VULCANEXUS" -eq 0 ] && info "→ expected without Vulcanexus."
+                AI_ORION[$attr]="UNINITIALIZED" ;;
+            MISSING)
+                warn "Orion-LD $attr not found (is the rt/ mapping in context_broker_config.json?)"
+                AI_ORION[$attr]="MISSING" ;;
+            *)
+                warn "Orion-LD $attr query failed or returned unexpected payload"
+                AI_ORION[$attr]="ERROR" ;;
+        esac
+    done
+}
+validate_ai
 
 # ── 5. summary ───────────────────────────────────────────────────────────────
 head "Summary"
@@ -214,11 +281,14 @@ printf '  %-38s %-8s %s\n' "COMPONENT" "ROS2" "ORION-LD VALUE"
 hr
 for label in \
     "2. Voice (VOICE_BACKEND=ros2)" \
-    "3. Gesture (GESTURE_BACKEND=ros2)" \
-    "4. AI detector (AI_BACKEND=ros2)"; do
+    "3. Gesture (GESTURE_BACKEND=ros2)"; do
     t="${RESULT_TOPIC[$label]:-?}"
     o="${RESULT_ORION[$label]:-?}"
     printf '  %-38s %-8s %s\n' "$label" "$t" "$o"
+done
+printf '  %-38s\n' "4. AI detector (AI_BACKEND=ros2)"
+for attr in status bottleCount pickPose result; do
+    printf '  %-38s %-8s %s\n' "     .$attr" "${AI_TOPIC[$attr]:-?}" "${AI_ORION[$attr]:-?}"
 done
 hr
 
