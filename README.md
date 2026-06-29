@@ -732,6 +732,10 @@ string does not propagate to DDS. The Vulcanexus wrapper takes an optional targe
 ./run_vulcanexus_dds_validation.sh validate_dds_command_flow.sh
 ```
 
+Run all of the above as one regression suite (DDS-native + command-flow + the
+`task_pack_bottle` DDS-source / default-source / no-robot-safety checks) with
+`./run_dds_regression_tests.sh` (validation only — no dashboard, no NGSI-v2 demo).
+
 **Real perception behind the same DDS interface.** The `ros2` AI backend has two detection modes,
 selected with `AI_DETECTION_MODE` — `stub` (default; no camera/PyTorch) and `real`, which runs the
 **existing** detector pipeline (Faster R-CNN + ArUco homography) and publishes the real result on
