@@ -8,7 +8,15 @@
 > (String/Bool/Int32/…), not just `String`, and the reserved-`status`-leaf topic is handled via a
 > `status_json` rename — see
 > [`fiware_bridge/docs/dds_full_integration_plan.md`](./ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/docs/dds_full_integration_plan.md).
-> The custom-node / NGSI-v2 path remains the default for the full dashboard demonstrator.
+>
+> ✅ **Everything except the React dashboard has been validated end-to-end on the DDS backend.**
+> The bridge, the voice / gesture / IoT-button command inputs, the AI bottle detector (status, bottle
+> count, pick pose, full result, and the real Faster-R-CNN perception path), and the
+> `task_pack_bottle` behaviour tree all round-trip over **ROS 2 → DDS → Orion-LD (NGSI-LD)**, verified
+> under Vulcanexus by [`./run_dds_regression_tests.sh`](#dds-native-validation). Only the **React
+> dashboard** still requires the custom-node / NGSI-v2 backend (it reads NGSI-v2, which the
+> `-mongocOnly` DDS broker does not serve), so the full dashboard demonstrator continues to run over
+> the custom node.
 
 **End user:** [CMYK Ingredients](https://www.cmykingredients.com/) &nbsp;·&nbsp;
 **Technology provider:** [High Performance Creators (HPCBG)](https://hpc.bg/)
@@ -667,8 +675,11 @@ Pack bottle operation in idustrial setup:
 ### DDS-native validation
 
 > **Scope:** this DDS-native path is now part of **`main`** (merged from the former
-> `dds-full-integration` branch). It is an *additional* integration path: the full dashboard
-> demonstrator above is unchanged and still runs over the **custom node bridge / NGSI-v2**.
+> `dds-full-integration` branch). **Every subsystem except the React dashboard has been validated
+> end-to-end on the DDS backend** — bridge, voice, gesture, IoT button, AI detector (including real
+> Faster-R-CNN perception), and the `task_pack_bottle` behaviour tree. The dashboard reads NGSI-v2,
+> which the `-mongocOnly` DDS broker does not serve, so the full dashboard demonstrator above still
+> runs over the **custom node bridge / NGSI-v2**.
 
 On `main` the voice, gesture and AI-detector modules each gained a DDS-native
 **`ros2` backend** (selected with `VOICE_BACKEND=ros2`, `GESTURE_BACKEND=ros2`, `AI_BACKEND=ros2`).
