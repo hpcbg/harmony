@@ -2,11 +2,13 @@
 
 > **ARISE D4 Shareable Module** | MIT License | ROS 2 Jazzy / Vulcanexus | FIWARE Orion v3
 
-> ⚙️ **Branch `dds-full-integration` (exploratory — not the D4 deliverable).** On this branch the
-> DDS enabler backend covers **all scalar `std_msgs` types** (String/Bool/Int32/…), not just
-> `String`, and the reserved-`status`-leaf topic is handled via a `status_json` rename — see
+> ⚙️ **Unified `main`.** The previously separate `shareable-modules` (conservative String-only DDS
+> scope) and `dds-full-integration` (full DDS enabler) branches are now **merged into `main`**, which
+> is the single D4 deliverable. The DDS enabler backend covers **all scalar `std_msgs` types**
+> (String/Bool/Int32/…), not just `String`, and the reserved-`status`-leaf topic is handled via a
+> `status_json` rename — see
 > [`fiware_bridge/docs/dds_full_integration_plan.md`](./ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/docs/dds_full_integration_plan.md).
-> The frozen `shareable-modules` deliverable keeps the conservative String-only DDS scope.
+> The custom-node / NGSI-v2 path remains the default for the full dashboard demonstrator.
 
 **End user:** [CMYK Ingredients](https://www.cmykingredients.com/) &nbsp;·&nbsp;
 **Technology provider:** [High Performance Creators (HPCBG)](https://hpc.bg/)
@@ -311,7 +313,7 @@ across LANs and Docker bridges. It carries all topic types and reproduces the no
 (`value_mapping`, base64) that the DDS enabler does not.
 
 **DDS enabler** — the ARISE-native alternative: ROS 2 / Vulcanexus DDS topics are mapped straight
-into Orion-LD as NGSI-LD entities, with no bridge node at all. On this branch it covers **all
+into Orion-LD as NGSI-LD entities, with no bridge node at all. On `main` it covers **all
 scalar `std_msgs` topics** — the bridge maps each via DDS dynamic-type discovery as
 `.<attr>.value.data` (String→JSON string, Bool→JSON bool, Int→JSON number). The node-only
 transforms (`value_mapping`, base64) are **not** reproduced, so wire native values upstream (PATCH a
@@ -662,12 +664,13 @@ Pack bottle operation in idustrial setup:
 > conservative so the multimodal HRI (voice, gesture, IoT button) is clearly visible; they are not
 > indicative of the cell's achievable cycle-time performance.
 
-### Experimental DDS-native validation
+### DDS-native validation
 
-> **Scope:** this is an exploratory path on the **`dds-full-integration` branch only**. The full
-> dashboard demonstrator above is unchanged and still runs over the **custom node bridge / NGSI-v2**.
+> **Scope:** this DDS-native path is now part of **`main`** (merged from the former
+> `dds-full-integration` branch). It is an *additional* integration path: the full dashboard
+> demonstrator above is unchanged and still runs over the **custom node bridge / NGSI-v2**.
 
-On `dds-full-integration` the voice, gesture and AI-detector modules each gained an experimental
+On `main` the voice, gesture and AI-detector modules each gained a DDS-native
 **`ros2` backend** (selected with `VOICE_BACKEND=ros2`, `GESTURE_BACKEND=ros2`, `AI_BACKEND=ros2`).
 Instead of posting NGSI-v2 entities over HTTP, they publish scalar `std_msgs` topics (`String`, and
 `Int32` for the bottle count); an Orion-LD broker started with `-wip dds` maps those DDS topics
@@ -889,7 +892,7 @@ harmony/
 - ROS 2 bag file replay as a substitute for live sensor data (planned but not tested).
 
 **Future work:**
-- ✅ **Done (this branch):** the **DDS backend** now covers non-`String` topics — `Bool`/`Int32`
+- ✅ **Done (merged into `main`):** the **DDS backend** now covers non-`String` topics — `Bool`/`Int32`
   M5Stack inputs and the renamed `status_json` topic all round-trip over DDS (see
   [`dds_full_integration_plan.md`](./ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/docs/dds_full_integration_plan.md)).
   Remaining: validate it as the *primary* backend for the full demonstrator (currently the custom
