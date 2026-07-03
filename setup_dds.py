@@ -36,13 +36,17 @@ from setup import (
 # Source Vulcanexus (ARISE-compliant) first, then plain Jazzy, plus the project
 # workspace, so the venv python running gesture/voice can import rclpy from the
 # sourced PYTHONPATH (the single-interpreter approach the AI torch_venv uses).
+# The venvs are isolated (no system site-packages), so rclpy's pure-Python deps
+# (yaml, lark, catkin_pkg) — which live in the system dist-packages — are appended
+# to PYTHONPATH; appended (not prepended) so the venv's mediapipe/vosk still win.
 # NB: braces are doubled ({{ }}) so they survive str.format() below and become a
 # real bash group `{ ... }` at launch time (matching launch_pack_bottle_dds.sh).
 ROS_SRC = (
     "{{ [ -f /opt/vulcanexus/jazzy/setup.bash ] "
     "&& source /opt/vulcanexus/jazzy/setup.bash "
     "|| source /opt/ros/jazzy/setup.bash; "
-    "source ros2-xarm-pack-bottle/ros2_ws/install/setup.bash 2>/dev/null || true; }}"
+    "source ros2-xarm-pack-bottle/ros2_ws/install/setup.bash 2>/dev/null || true; "
+    "export PYTHONPATH=$PYTHONPATH:/usr/lib/python3/dist-packages; }}"
 )
 
 # DDS-native services, in launch order. Same cmd_tpl placeholders as setup.py:

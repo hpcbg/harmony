@@ -42,7 +42,14 @@ SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 # Jazzy) plus the project workspace, so the venv python that runs the gesture/voice
 # modules can import rclpy from the sourced PYTHONPATH (the same single-interpreter
 # approach the AI detector's torch_venv uses).
-ROS_SRC='{ [ -f /opt/vulcanexus/jazzy/setup.bash ] && source /opt/vulcanexus/jazzy/setup.bash || source /opt/ros/jazzy/setup.bash; source ros2-xarm-pack-bottle/ros2_ws/install/setup.bash 2>/dev/null || true; }'
+#
+# The gesture/voice venvs are isolated (include-system-site-packages = false), so
+# rclpy's pure-Python deps (yaml, lark, catkin_pkg) — which live in the system
+# dist-packages, not in the venv — are invisible and rclpy's `import yaml` fails
+# with "ROS 2 not found". Append the system dist-packages to PYTHONPATH so those
+# resolve; it is appended (not prepended) so the venv's own mediapipe/vosk win.
+# (torch_venv sidesteps this by having yaml/lark pip-installed into it directly.)
+ROS_SRC='{ [ -f /opt/vulcanexus/jazzy/setup.bash ] && source /opt/vulcanexus/jazzy/setup.bash || source /opt/ros/jazzy/setup.bash; source ros2-xarm-pack-bottle/ros2_ws/install/setup.bash 2>/dev/null || true; export PYTHONPATH=$PYTHONPATH:/usr/lib/python3/dist-packages; }'
 
 # Warn (do not block) if a non-LD Orion is already holding port 1026 — the DDS
 # broker cannot bind it and the demo would silently talk to the wrong broker.
