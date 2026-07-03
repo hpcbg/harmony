@@ -648,6 +648,13 @@ cd react-dashboard && . ./run.sh
 
 Alternatively, use the top-level launch script: `./launch_pack_bottle.sh`
 
+**DDS-native runtime.** To bring the same demo up on the **DDS-broker-only / NGSI-LD** path
+instead — the Orion-LD DDS broker, the `ros2` voice/gesture/AI backends, and the `dds` bridge
+backend, with the React dashboard omitted (NGSI-v2 only) — use the DDS counterparts:
+`./launch_pack_bottle_dds.sh` (one-shot launcher) or `python3 setup_dds.py` (guided Setup
+Assistant, DDS variant). Both require a Vulcanexus ROS side, and the DDS broker replaces the
+standard Orion stack on port 1026 (run only one at a time).
+
 **Operator input:** press the blue button on the M5Stack, or say "GO PICK".
 
 **Expected output:** robot executes the pick-fill-cap-handover sequence; all stages appear in the
