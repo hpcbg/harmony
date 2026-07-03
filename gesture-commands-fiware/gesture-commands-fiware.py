@@ -122,9 +122,34 @@ parser.add_argument('--no-fiware',          action='store_true',
                     help='Disable FIWARE publishing (run detector only)')
 parser.add_argument('--no-gui',             action='store_true',
                     help='Headless mode: skip OpenCV window and all drawing')
-parser.add_argument('--camera',             type=int, default=0,
-                    help='Camera device index (default: 0)')
+parser.add_argument('--camera',             type=int, default=None,
+                    help='Camera device index. Overrides config/config.json; '
+                         'falls back to that file\'s CAMERA, else 0.')
 ARGS = parser.parse_args()
+
+
+# ── Camera source: --camera (CLI) > config/config.json CAMERA > 0 ──────────────
+# Mirrors the AI detector's config/config.json convention (a tracked
+# config/config.json.tpl template; the real config/config.json is gitignored and
+# machine-local). Missing file or key is never fatal — we fall back to 0.
+def _load_camera_config():
+    import json
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "config", "config.json")
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+    except Exception as exc:                       # malformed JSON, etc.
+        print(f"[CONFIG] Ignoring {path}: {exc}")
+        return {}
+
+
+if ARGS.camera is None:
+    ARGS.camera = int(_load_camera_config().get("CAMERA", 0))
+    print(f"[CONFIG] camera device {ARGS.camera} "
+          "(from config/config.json; override with --camera)")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Gesture / detection configuration

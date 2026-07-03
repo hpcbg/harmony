@@ -23,6 +23,8 @@ First-time installation reuses setup.py's install flow; pick the `dds` bridge
 backend (the default) when prompted.
 """
 
+import contextlib
+import io
 import sys
 
 # Reuse the shared assistant machinery from setup.py (same directory).
@@ -100,6 +102,23 @@ DDS_STARTUP_SERVICES = [
                     "&& BRIDGE_BACKEND=dds ./run.sh"),
     },
 ]
+
+
+# The shared installer's summary hard-codes `./launch_pack_bottle.sh`; on the DDS
+# path the one-shot launcher is `./launch_pack_bottle_dds.sh`. Wrap the summary,
+# capture its output, and rewrite just that command. (mode_install() looks up
+# `print_install_summary` in setup's globals at call time, so patching it on `base`
+# is enough — the original is captured here first to avoid recursion.)
+_orig_install_summary = base.print_install_summary
+
+
+def _dds_install_summary(components, cfg):
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        _orig_install_summary(components, cfg)
+    sys.stdout.write(
+        buf.getvalue().replace("./launch_pack_bottle.sh", "./launch_pack_bottle_dds.sh")
+    )
 
 
 def mode_startup_dds():
@@ -237,6 +256,7 @@ def main():
         info("Reusing the shared installer — choose the 'dds' bridge backend (the default) "
              "when prompted for the FIWARE bridge backend.")
         print()
+        base.print_install_summary = _dds_install_summary  # show the DDS launcher
         base.mode_install()
 
 
