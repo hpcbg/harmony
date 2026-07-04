@@ -86,33 +86,40 @@ def read_gesture_camera():
 
 
 def _ask_gesture_camera(default):
+    """Prompt `Gesture camera ID [current: N, Enter to keep]:` — Enter keeps
+    `default`; a non-negative integer replaces it; anything else keeps it."""
+    raw = ask(f"Gesture camera ID [current: {default}, Enter to keep]",
+              default="", required=False).strip()
+    if not raw:
+        return int(default)
     try:
-        return int(ask("Gesture camera device ID", default=str(default)))
-    except (ValueError, TypeError):
+        val = int(raw)
+        return val if val >= 0 else int(default)
+    except ValueError:
         return int(default)
 
 
-def ensure_gesture_camera(force=False):
-    """Resolve the persistent gesture camera ID, prompting only when necessary.
+def configure_gesture_camera():
+    """Resolve the gesture camera ID for Daily Startup, prompting once.
 
-      • missing    → ask (default from config.json.tpl, else 0), create the file
-      • malformed  → warn clearly, ask for a replacement, rewrite the file
-      • ok         → return silently (no prompt) unless force=True (reconfigure)
+      • missing    → default from config.json.tpl (else 0); create config.json
+      • malformed  → warn clearly, ask for a replacement, rewrite config.json
+      • ok         → default is the stored value; Enter keeps it, a new value rewrites
+
+    Returns the effective camera ID. Only writes when the value is new or the file
+    was missing/malformed.
     """
     rel = GESTURE_CONFIG.relative_to(SCRIPT_DIR)
     camera, status = read_gesture_camera()
-
-    if status == "ok" and not force:
-        return camera
     if status == "malformed":
-        warn(f"{rel} is malformed — its camera ID could not be read. Reconfiguring.")
+        warn(f"{rel} is malformed — its camera ID could not be read. Please set it again.")
 
     default = camera if status == "ok" else _tpl_camera_default()
-    print()
-    camera = _ask_gesture_camera(default)
-    _write_gesture_camera(camera)
-    ok(f"Gesture camera {camera} saved to {rel}")
-    return camera
+    new = _ask_gesture_camera(default)
+    if status != "ok" or new != camera:
+        _write_gesture_camera(new)
+        ok(f"Gesture camera {new} saved to {rel}")
+    return new
 
 
 # DDS-native services, in launch order. cmd_tpl placeholder {root} = SCRIPT_DIR.
@@ -239,10 +246,11 @@ def mode_startup_dds():
         warn("Nothing selected — exiting.")
         return
 
-    # ── Gesture camera (persisted in config/config.json; prompt only if needed) ─
+    # ── Gesture camera (persisted in config/config.json; only when selected) ────
     camera = None
     if "gesture" in selected:
-        camera = ensure_gesture_camera()
+        print()
+        camera = configure_gesture_camera()
 
     # ── Terminal detection ─────────────────────────────────────────────────────
     terminal = detect_terminal()
@@ -267,7 +275,7 @@ def mode_startup_dds():
     labels = [s["label"] for s in DDS_STARTUP_SERVICES if s["key"] in selected]
     print(f"\n  {colorize('Will start:', BOLD)} {', '.join(labels)}")
     if camera is not None:
-        print(f"  {colorize('Gesture camera:', BOLD)} device {camera} "
+        print(f"  {colorize('Hand Gesture Recognition', BOLD)} — camera ID {camera} "
               f"{colorize('(from config/config.json)', DIM)}")
     print()
     if not ask_yes_no("Launch now?", default=True):
@@ -300,25 +308,17 @@ def main():
 {colorize('  Orion-LD DDS broker · ros2 backends · no dashboard', DIM)}
 {colorize('═' * 60, BOLD, CYAN)}
 """)
-    cam, cam_status = read_gesture_camera()
-    cam_hint = (f"currently device {cam}" if cam_status == "ok"
-                else "malformed — needs fixing" if cam_status == "malformed"
-                else "not set yet")
     mode = ask_choice(
         "What would you like to do?",
         [
-            "Daily Startup (DDS)     — check readiness and launch the DDS-native runtime",
-            "First-time Install      — install dependencies and generate config files",
-            f"Set gesture camera ID   — reconfigure config/config.json ({cam_hint})",
+            "Daily Startup (DDS)  — check readiness and launch the DDS-native runtime",
+            "First-time Install   — install dependencies and generate config files",
         ],
         default=0,
     )
     print()
     if mode == 0:
         mode_startup_dds()
-    elif mode == 2:
-        step("Configure Gesture Camera")
-        ensure_gesture_camera(force=True)
     else:
         info("Reusing the shared installer — choose the 'dds' bridge backend (the default) "
              "when prompted for the FIWARE bridge backend.")
