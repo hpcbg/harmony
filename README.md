@@ -655,6 +655,15 @@ backend, with the React dashboard omitted (NGSI-v2 only) — use the DDS counter
 Assistant, DDS variant). Both require a Vulcanexus ROS side, and the DDS broker replaces the
 standard Orion stack on port 1026 (run only one at a time).
 
+The gesture camera device ID for this path is stored in
+`gesture-commands-fiware/config/config.json` — a machine-local file (gitignored, created from
+the tracked `config/config.json.tpl`). `setup_dds.py` is the canonical place to set it: it
+prompts once when the file is missing (or is malformed), records your choice, and thereafter
+launches without asking; its menu also has a **"Set gesture camera ID"** option to change it on
+demand. `./launch_pack_bottle_dds.sh` therefore no longer takes a `--camera` flag — it reads the
+stored value. Running the gesture script directly still accepts an optional `--camera N` as a
+one-run override, e.g. `python gesture-commands-fiware.py --camera 2`.
+
 **Operator input:** press the blue button on the M5Stack, or say "GO PICK".
 
 **Expected output:** robot executes the pick-fill-cap-handover sequence; all stages appear in the

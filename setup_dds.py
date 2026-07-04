@@ -25,6 +25,7 @@ backend (the default) when prompted.
 
 import contextlib
 import io
+import json
 import sys
 
 # Reuse the shared assistant machinery from setup.py (same directory).
@@ -32,7 +33,7 @@ import setup as base
 from setup import (
     colorize, BOLD, CYAN, DIM, GREEN, YELLOW,
     step, ok, warn, info, ask, ask_yes_no, ask_choice,
-    detect_terminal, load_state, save_state, SCRIPT_DIR,
+    detect_terminal, SCRIPT_DIR,
 )
 
 # Source Vulcanexus (ARISE-compliant) first, then plain Jazzy, plus the project
@@ -51,9 +52,72 @@ ROS_SRC = (
     "export PYTHONPATH=$PYTHONPATH:/usr/lib/python3/dist-packages; }}"
 )
 
-# DDS-native services, in launch order. Same cmd_tpl placeholders as setup.py:
-# {root} = SCRIPT_DIR, {camera} = gesture camera device ID. The React dashboard
-# is intentionally absent (NGSI-v2 only).
+# ── Persistent gesture camera ID ──────────────────────────────────────────────
+# The gesture camera lives in gesture-commands-fiware/config/config.json (created
+# from config.json.tpl; machine-local and gitignored). This assistant is the
+# canonical place to set it; gesture-commands-fiware.py reads the same file at
+# launch (a direct `--camera` on that script still overrides it for one run).
+GESTURE_CONFIG_DIR = SCRIPT_DIR / "gesture-commands-fiware" / "config"
+GESTURE_CONFIG = GESTURE_CONFIG_DIR / "config.json"
+GESTURE_CONFIG_TPL = GESTURE_CONFIG_DIR / "config.json.tpl"
+
+
+def _tpl_camera_default():
+    """Gesture camera default from config.json.tpl, else 0."""
+    try:
+        return int(json.loads(GESTURE_CONFIG_TPL.read_text()).get("CAMERA", 0))
+    except Exception:
+        return 0
+
+
+def _write_gesture_camera(camera):
+    GESTURE_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    GESTURE_CONFIG.write_text(json.dumps({"CAMERA": int(camera)}, indent=2) + "\n")
+
+
+def read_gesture_camera():
+    """Return (camera_id, status): status is 'ok' | 'missing' | 'malformed'."""
+    if not GESTURE_CONFIG.exists():
+        return None, "missing"
+    try:
+        return int(json.loads(GESTURE_CONFIG.read_text())["CAMERA"]), "ok"
+    except Exception:
+        return None, "malformed"
+
+
+def _ask_gesture_camera(default):
+    try:
+        return int(ask("Gesture camera device ID", default=str(default)))
+    except (ValueError, TypeError):
+        return int(default)
+
+
+def ensure_gesture_camera(force=False):
+    """Resolve the persistent gesture camera ID, prompting only when necessary.
+
+      • missing    → ask (default from config.json.tpl, else 0), create the file
+      • malformed  → warn clearly, ask for a replacement, rewrite the file
+      • ok         → return silently (no prompt) unless force=True (reconfigure)
+    """
+    rel = GESTURE_CONFIG.relative_to(SCRIPT_DIR)
+    camera, status = read_gesture_camera()
+
+    if status == "ok" and not force:
+        return camera
+    if status == "malformed":
+        warn(f"{rel} is malformed — its camera ID could not be read. Reconfiguring.")
+
+    default = camera if status == "ok" else _tpl_camera_default()
+    print()
+    camera = _ask_gesture_camera(default)
+    _write_gesture_camera(camera)
+    ok(f"Gesture camera {camera} saved to {rel}")
+    return camera
+
+
+# DDS-native services, in launch order. cmd_tpl placeholder {root} = SCRIPT_DIR.
+# The gesture module reads its camera from config/config.json (see above), so no
+# --camera is passed here. The React dashboard is intentionally absent (NGSI-v2).
 DDS_STARTUP_SERVICES = [
     {
         "key":     "fiware",   # keep key "fiware" so the docker readiness check applies
@@ -80,8 +144,7 @@ DDS_STARTUP_SERVICES = [
         "checks":  ["venv/bin/activate"],
         "cmd_tpl": ("sleep 8 && cd {root} && source venv/bin/activate && " + ROS_SRC +
                     " && cd gesture-commands-fiware "
-                    "&& GESTURE_BACKEND=ros2 python gesture-commands-fiware.py "
-                    "--camera {camera} --no-gui"),
+                    "&& GESTURE_BACKEND=ros2 python gesture-commands-fiware.py --no-gui"),
     },
     {
         "key":     "voice",
@@ -123,7 +186,6 @@ def _dds_install_summary(components, cfg):
 
 def mode_startup_dds():
     step("Daily Startup — DDS-native (NGSI-LD)")
-    state = load_state()
 
     # ── Readiness table ───────────────────────────────────────────────────────
     print(f"\n  {colorize('Service readiness:', BOLD)}\n")
@@ -177,14 +239,10 @@ def mode_startup_dds():
         warn("Nothing selected — exiting.")
         return
 
-    # ── Camera ID (gesture only) ───────────────────────────────────────────────
-    camera = state.get("camera", 0)
+    # ── Gesture camera (persisted in config/config.json; prompt only if needed) ─
+    camera = None
     if "gesture" in selected:
-        print()
-        try:
-            camera = int(ask("Camera device ID for gesture recognition", default=str(camera)))
-        except ValueError:
-            camera = 0
+        camera = ensure_gesture_camera()
 
     # ── Terminal detection ─────────────────────────────────────────────────────
     terminal = detect_terminal()
@@ -207,7 +265,11 @@ def mode_startup_dds():
 
     # ── Confirm and launch ─────────────────────────────────────────────────────
     labels = [s["label"] for s in DDS_STARTUP_SERVICES if s["key"] in selected]
-    print(f"\n  {colorize('Will start:', BOLD)} {', '.join(labels)}\n")
+    print(f"\n  {colorize('Will start:', BOLD)} {', '.join(labels)}")
+    if camera is not None:
+        print(f"  {colorize('Gesture camera:', BOLD)} device {camera} "
+              f"{colorize('(from config/config.json)', DIM)}")
+    print()
     if not ask_yes_no("Launch now?", default=True):
         info("Aborted.")
         return
@@ -216,15 +278,12 @@ def mode_startup_dds():
     for svc in DDS_STARTUP_SERVICES:
         if svc["key"] not in selected:
             continue
-        cmd = svc["cmd_tpl"].format(root=root, camera=camera)
+        cmd = svc["cmd_tpl"].format(root=root)
         if terminal == "none":
             print(f"\n  {colorize(svc['label'], BOLD)}:\n    {cmd}")
         else:
             info(f"Launching {svc['label']}...")
             base._launch_in_terminal(terminal, svc["label"], cmd)
-
-    state["camera"] = camera
-    save_state(state)
 
     if terminal != "none":
         print()
@@ -241,17 +300,25 @@ def main():
 {colorize('  Orion-LD DDS broker · ros2 backends · no dashboard', DIM)}
 {colorize('═' * 60, BOLD, CYAN)}
 """)
+    cam, cam_status = read_gesture_camera()
+    cam_hint = (f"currently device {cam}" if cam_status == "ok"
+                else "malformed — needs fixing" if cam_status == "malformed"
+                else "not set yet")
     mode = ask_choice(
         "What would you like to do?",
         [
-            "Daily Startup (DDS)  — check readiness and launch the DDS-native runtime",
-            "First-time Install   — install dependencies and generate config files",
+            "Daily Startup (DDS)     — check readiness and launch the DDS-native runtime",
+            "First-time Install      — install dependencies and generate config files",
+            f"Set gesture camera ID   — reconfigure config/config.json ({cam_hint})",
         ],
         default=0,
     )
     print()
     if mode == 0:
         mode_startup_dds()
+    elif mode == 2:
+        step("Configure Gesture Camera")
+        ensure_gesture_camera(force=True)
     else:
         info("Reusing the shared installer — choose the 'dds' bridge backend (the default) "
              "when prompted for the FIWARE bridge backend.")
