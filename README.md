@@ -2,20 +2,18 @@
 
 > **ARISE D4 Shareable Module** | MIT License | ROS 2 Jazzy / Vulcanexus | FIWARE Orion v3
 
-> ⚙️ **Unified `main`.** The previously separate `shareable-modules` (conservative String-only DDS
-> scope) and `dds-full-integration` (full DDS enabler) branches are now **merged into `main`**, which
-> is the single D4 deliverable. The DDS enabler backend covers **all scalar `std_msgs` types**
+> ⚙️ **DDS enabler.** The DDS enabler backend covers **all scalar `std_msgs` types**
 > (String/Bool/Int32/…), not just `String`, and the reserved-`status`-leaf topic is handled via a
 > `status_json` rename — see
 > [`fiware_bridge/docs/dds_full_integration_plan.md`](./ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/docs/dds_full_integration_plan.md).
 >
-> ✅ **Everything except the React dashboard has been validated end-to-end on the DDS backend.**
+> ✅ **Everything except the React dashboard is validated end-to-end on the DDS backend.**
 > The bridge, the voice / gesture / IoT-button command inputs, the AI bottle detector (status, bottle
 > count, pick pose, full result, and the real Faster-R-CNN perception path), and the
 > `task_pack_bottle` behaviour tree all round-trip over **ROS 2 → DDS → Orion-LD (NGSI-LD)**, verified
 > under Vulcanexus by [`./run_dds_regression_tests.sh`](#dds-native-validation). Only the **React
-> dashboard** still requires the custom-node / NGSI-v2 backend (it reads NGSI-v2, which the
-> `-mongocOnly` DDS broker does not serve), so the full dashboard demonstrator continues to run over
+> dashboard** requires the custom-node / NGSI-v2 backend (it reads NGSI-v2, which the
+> `-mongocOnly` DDS broker does not serve), so the full dashboard demonstrator runs over
 > the custom node.
 
 **End user:** [CMYK Ingredients](https://www.cmykingredients.com/) &nbsp;·&nbsp;
@@ -321,7 +319,7 @@ across LANs and Docker bridges. It carries all topic types and reproduces the no
 (`value_mapping`, base64) that the DDS enabler does not.
 
 **DDS enabler** — the ARISE-native alternative: ROS 2 / Vulcanexus DDS topics are mapped straight
-into Orion-LD as NGSI-LD entities, with no bridge node at all. On `main` it covers **all
+into Orion-LD as NGSI-LD entities, with no bridge node at all. It covers **all
 scalar `std_msgs` topics** — the bridge maps each via DDS dynamic-type discovery as
 `.<attr>.value.data` (String→JSON string, Bool→JSON bool, Int→JSON number). The node-only
 transforms (`value_mapping`, base64) are **not** reproduced, so wire native values upstream (PATCH a
@@ -486,7 +484,7 @@ Expected: JSON response showing Orion version `3.10.1`.
 cd ros2-xarm-pack-bottle/ros2_ws
 source install/setup.bash
 # This hello world uses the standard Orion stack from Step 1, so use the NGSI-v2
-# node backend. (The default backend is now dds; its hello world — Orion-LD DDS
+# node backend. (The default backend is dds; its hello world — Orion-LD DDS
 # broker + Vulcanexus — is in fiware_bridge/dds/README.md.)
 ros2 launch fiware_bridge fiware_bridge.launch.py bridge_backend:=node
 ```
@@ -652,17 +650,46 @@ Alternatively, use the top-level launch script: `./launch_pack_bottle.sh`
 instead — the Orion-LD DDS broker, the `ros2` voice/gesture/AI backends, and the `dds` bridge
 backend, with the React dashboard omitted (NGSI-v2 only) — use the DDS counterparts:
 `./launch_pack_bottle_dds.sh` (one-shot launcher) or `python3 setup_dds.py` (guided Setup
-Assistant, DDS variant). Both require a Vulcanexus ROS side, and the DDS broker replaces the
-standard Orion stack on port 1026 (run only one at a time).
+Assistant, DDS variant). Both require a Vulcanexus ROS side, and the DDS broker binds the same
+host port 1026 as the standard Orion stack (run only one at a time).
 
-The gesture camera device ID for this path is stored in
+By default both perception modules run in **real camera mode**: AI bottle detection uses its
+camera + weights, and gesture recognition uses the camera device stored in
 `gesture-commands-fiware/config/config.json` — a machine-local file (gitignored, created from
-the tracked `config/config.json.tpl`). `setup_dds.py` is the canonical place to set it: it
-prompts once when the file is missing (or is malformed), records your choice, and thereafter
-launches without asking; its menu also has a **"Set gesture camera ID"** option to change it on
-demand. `./launch_pack_bottle_dds.sh` therefore no longer takes a `--camera` flag — it reads the
-stored value. Running the gesture script directly still accepts an optional `--camera N` as a
-one-run override, e.g. `python gesture-commands-fiware.py --camera 2`.
+the tracked `config/config.json.tpl`):
+
+```json
+{
+  "CAMERA": 0
+}
+```
+
+To set the gesture camera, run `python3 setup_dds.py` and choose **Daily Startup (DDS)** — it
+prompts for the camera ID (Enter keeps the current value) and writes it to `config/config.json`.
+Running the gesture script directly accepts an optional `--camera N` as a one-run override, e.g.
+`python gesture-commands-fiware.py --camera 2`.
+
+**Stub modes (no camera).** Either perception module can run without a camera. Run AI bottle
+detection without a camera (no weights/pipeline needed):
+
+```bash
+AI_DETECTION_MODE=stub ./launch_pack_bottle_dds.sh
+```
+
+Run gesture recognition without a camera — it idles in `NO_HAND` and needs no MediaPipe;
+`TEST_GESTURE=SIDE_GRIP` (or `NO_HAND`/`CAP_PLACED`) publishes gestures headlessly:
+
+```bash
+GESTURE_MODE=stub ./launch_pack_bottle_dds.sh
+```
+
+Run both in stub mode (the whole ROS 2 → DDS → Orion-LD path with no cameras attached):
+
+```bash
+AI_DETECTION_MODE=stub \
+GESTURE_MODE=stub \
+./launch_pack_bottle_dds.sh
+```
 
 **Operator input:** press the blue button on the M5Stack, or say "GO PICK".
 
@@ -690,22 +717,20 @@ Pack bottle operation in idustrial setup:
 
 ### DDS-native validation
 
-> **Scope:** this DDS-native path is now part of **`main`** (merged from the former
-> `dds-full-integration` branch). **Every subsystem except the React dashboard has been validated
+> **Scope:** on the DDS-native path, **every subsystem except the React dashboard is validated
 > end-to-end on the DDS backend** — bridge, voice, gesture, IoT button, AI detector (including real
 > Faster-R-CNN perception), and the `task_pack_bottle` behaviour tree. The dashboard reads NGSI-v2,
-> which the `-mongocOnly` DDS broker does not serve, so the full dashboard demonstrator above still
+> which the `-mongocOnly` DDS broker does not serve, so the full dashboard demonstrator above
 > runs over the **custom node bridge / NGSI-v2**.
 
-On `main` the voice, gesture and AI-detector modules each gained a DDS-native
+The voice, gesture and AI-detector modules each provide a DDS-native
 **`ros2` backend** (selected with `VOICE_BACKEND=ros2`, `GESTURE_BACKEND=ros2`, `AI_BACKEND=ros2`).
-Instead of posting NGSI-v2 entities over HTTP, they publish scalar `std_msgs` topics (`String`, and
+Rather than posting NGSI-v2 entities over HTTP, these publish scalar `std_msgs` topics (`String`, and
 `Int32` for the bottle count); an Orion-LD broker started with `-wip dds` maps those DDS topics
 directly to NGSI-LD — no custom bridge node and no NGSI-v2 `/v2` calls (so no HTTP 501 from the
-`-mongocOnly` DDS broker). The AI detector's result is migrated **incrementally**, one DDS-native
-output at a time (status, bottle count, pick pose, full result JSON), so the refactor stays
-controlled and never breaks the NGSI-v2 dashboard demo; processed-image URLs and base64 payloads are
-not migrated and stay on the NGSI-v2 backend.
+`-mongocOnly` DDS broker). The AI detector exposes its result as separate DDS-native outputs
+(status, bottle count, pick pose, full result JSON); processed-image URLs and base64 payloads stay
+on the NGSI-v2 backend.
 
 The end-to-end path (voice keyword, gesture state, and the AI-detector's decomposed outputs) is
 validated through **ROS 2 → DDS → Orion-LD** by the top-level script:
@@ -778,8 +803,8 @@ result come back **real** in Orion-LD over DDS.
 
 **Behaviour tree consuming DDS-native outputs.** `task_pack_bottle` already publishes its detection
 trigger as `START` on `/bottle_detection/command` (accepted by both detector backends). Its result
-consumer (`BottleDetectorStatus`) is now source-selectable via the `TASK_DETECTOR_SOURCE` env var:
-`job_json` *(default — the NGSI-v2 / node-backend `/bottle_detection/job_json` path, unchanged)* or
+consumer (`BottleDetectorStatus`) is source-selectable via the `TASK_DETECTOR_SOURCE` env var:
+`job_json` *(default — the NGSI-v2 / node-backend `/bottle_detection/job_json` path)* or
 `dds`, which consumes the DDS-native detector's atomic full result on `/bottle_detection/result_json`
 (`status` / `pickPose`; the decomposed `bottle_count` / `pick_pose_json` topics carry the same data).
 The detection decision (DONE + a pick pose → proceed, else retry) is identical for both:
@@ -919,11 +944,11 @@ harmony/
 - ROS 2 bag file replay as a substitute for live sensor data (planned but not tested).
 
 **Future work:**
-- ✅ **Done (merged into `main`):** the **DDS backend** now covers non-`String` topics — `Bool`/`Int32`
-  M5Stack inputs and the renamed `status_json` topic all round-trip over DDS (see
+- ✅ **DDS backend — non-`String` topics:** `Bool`/`Int32` M5Stack inputs and the `status_json`
+  topic all round-trip over DDS (see
   [`dds_full_integration_plan.md`](./ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/docs/dds_full_integration_plan.md)).
   Remaining: validate it as the *primary* backend for the full demonstrator (currently the custom
-  node stays the default).
+  node is the default).
 - Bring NGSI-LD (`@context`-aware payloads) to the custom node backend as well, for parity with
   the DDS path.
 - Integrate `hri_body_detect` (PAL Robotics) to publish ROS4HRI-compliant `/humans/bodies/*`
