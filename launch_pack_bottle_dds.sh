@@ -28,9 +28,11 @@
 #   gesture-commands-fiware/config/config.json (created from config.json.tpl;
 #   machine-local and gitignored) — configure it with `python3 setup_dds.py`.
 #   AI_DETECTION_MODE=stub ./launch_pack_bottle_dds.sh   # no camera/weights AI path
+#   GESTURE_MODE=stub ./launch_pack_bottle_dds.sh        # no camera gesture path
 # ─────────────────────────────────────────────────────────────────────────────
 
 AI_MODE="${AI_DETECTION_MODE:-real}"
+GESTURE_MODE="${GESTURE_MODE:-real}"
 SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 
 # Source a ROS 2 env (Vulcanexus first — the ARISE-compliant choice — then plain
@@ -72,7 +74,8 @@ launch "AI Bottle Detector (DDS)"    "sleep 5 && cd ai-bottle-detector-fiware &&
 
 # 3. Gesture — DDS-native publisher (needs mediapipe from venv + rclpy from ROS).
 #    Camera device is resolved from gesture-commands-fiware/config/config.json.
-launch "Hand Gesture Detector (DDS)" "sleep 8 && source venv/bin/activate && $ROS_SRC && cd gesture-commands-fiware && GESTURE_BACKEND=ros2 python gesture-commands-fiware.py --no-gui"
+#    GESTURE_MODE=stub skips the camera and idles in NO_HAND (no mediapipe needed).
+launch "Hand Gesture Detector (DDS)" "sleep 8 && source venv/bin/activate && $ROS_SRC && cd gesture-commands-fiware && GESTURE_BACKEND=ros2 GESTURE_MODE=$GESTURE_MODE python gesture-commands-fiware.py --no-gui"
 
 # 4. Voice — DDS-native publisher (needs vosk from venv + rclpy from ROS).
 launch "Voice Commands Detector (DDS)" "sleep 8 && source venv/bin/activate && $ROS_SRC && cd voice-commands-fiware && VOICE_BACKEND=ros2 python voice-commands-fiware.py --keywords"

@@ -644,6 +644,17 @@ def main():
               "Use 'fiware_v2' (default) or 'ros2'.")
         raise SystemExit(1)
 
+    # GESTURE_MODE=real (default) → open the configured camera and run MediaPipe.
+    # GESTURE_MODE=stub           → no camera / no MediaPipe; publish an initial
+    #                               NO_HAND and idle (analogous to the AI
+    #                               detector's AI_DETECTION_MODE=stub). TEST_GESTURE
+    #                               still works in either mode.
+    gesture_mode = os.environ.get('GESTURE_MODE', 'real').strip().lower()
+    if gesture_mode not in ('real', 'stub'):
+        print(f"ERROR: unknown GESTURE_MODE='{gesture_mode}'. "
+              "Use 'real' (default) or 'stub'.")
+        raise SystemExit(1)
+
     # ── set up publisher ────────────────────────────────────────────────────
     if backend == 'ros2':
         publisher = Ros2GesturePublisher()
@@ -695,6 +706,28 @@ def main():
             publisher.close()
         return
 
+    # ── stub mode (no camera, no MediaPipe) ─────────────────────────────────
+    # GESTURE_MODE=stub keeps the backend running without opening any camera:
+    # publish an initial NO_HAND and idle so the DDS/FIWARE side still sees a
+    # live gesture detector. (TEST_GESTURE above already ran and returned if set.)
+    if gesture_mode == 'stub':
+        print("[STUB] GESTURE_MODE=stub — no camera opened; idling in NO_HAND.")
+        print("       (set TEST_GESTURE=... to publish gestures without a camera.)")
+        try:
+            if isinstance(publisher, Ros2GesturePublisher):
+                n = publisher.wait_for_subscribers()
+                print(f"[STUB] {n} DDS subscriber(s) matched." if n else
+                      "[STUB] no DDS subscriber matched yet — publishing anyway.")
+            publisher.publish(NO_HAND)
+            print(f"STATE:{NO_HAND}", flush=True)
+            while True:
+                time.sleep(1.0)
+        except KeyboardInterrupt:
+            print("\nStopping stub gesture detector.")
+        finally:
+            publisher.close()
+        return
+
     # ── live webcam detection ───────────────────────────────────────────────
     if not (_HAS_CV2 and _HAS_MEDIAPIPE and _HAS_NUMPY):
         missing = [n for n, ok in (('opencv-python', _HAS_CV2),
@@ -719,24 +752,14 @@ def main():
 
     cap = cv2.VideoCapture(ARGS.camera)
     if not cap.isOpened():
-        # The requested index may be stale (e.g. a saved --camera value from a
-        # different machine). Probe the low indices and fall back to the first
-        # camera that actually opens instead of failing outright.
+        # Real mode uses only the configured camera — no automatic fallback to
+        # another index. Report the error so a wrong camera ID is caught, not
+        # silently masked by opening camera 0.
         cap.release()
-        fallback = None
-        for idx in range(10):
-            if idx == ARGS.camera:
-                continue
-            probe = cv2.VideoCapture(idx)
-            if probe.isOpened():
-                cap, fallback = probe, idx
-                break
-            probe.release()
-        if fallback is None:
-            raise RuntimeError(
-                f"Cannot open webcam (index {ARGS.camera}); no camera found on "
-                f"indices 0-9. Pass a valid --camera index.")
-        print(f"[camera] index {ARGS.camera} unavailable — using index {fallback}.")
+        raise RuntimeError(
+            f"Cannot open camera index {ARGS.camera}. In real mode the configured "
+            f"camera is used as-is (no automatic fallback). Fix the camera ID in "
+            f"config/config.json (or pass --camera), or run with GESTURE_MODE=stub.")
     cap.set(cv2.CAP_PROP_FRAME_WIDTH,  800)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
 
