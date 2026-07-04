@@ -95,6 +95,46 @@ robot-specific code, which is what makes the combined module portable to a new t
 
 ---
 
+## Quick Start
+
+The DDS-native runtime is the default path. `setup_dds.py` is the guided Setup Assistant and
+`./launch_pack_bottle_dds.sh` is the one-shot launcher for the same runtime.
+
+**1. First-time installation** — run the Setup Assistant and choose option **2, First-time
+Install**. It installs all system and Python dependencies and builds the ROS 2 workspace (see
+[Installation](#installation)):
+
+```bash
+python3 setup_dds.py          # → 2) First-time Install
+```
+
+**2. Daily startup** — run the Setup Assistant and choose option **1, Daily Startup (DDS)**. It
+checks readiness, prompts for the gesture camera, and launches the DDS-native runtime:
+
+```bash
+python3 setup_dds.py          # → 1) Daily Startup (DDS)
+```
+
+**3. Direct startup** — once installed, bring up the whole DDS-broker-only demo in one command:
+
+```bash
+./launch_pack_bottle_dds.sh
+```
+
+**4. Hardware-free operation** — the stub modes keep the ROS 2 and DDS interfaces fully active but
+open no camera devices, so the whole path runs on a machine with no cameras attached:
+
+```bash
+AI_DETECTION_MODE=stub ./launch_pack_bottle_dds.sh                     # AI detector without a camera
+GESTURE_MODE=stub ./launch_pack_bottle_dds.sh                          # gesture recognition without a camera
+AI_DETECTION_MODE=stub GESTURE_MODE=stub ./launch_pack_bottle_dds.sh   # both without cameras
+```
+
+See [DDS-native runtime](#dds-native-runtime) for the gesture camera configuration and the stub
+modes in detail.
+
+---
+
 ## System Overview
 
 The full HARMONY demonstrator is a 7-subsystem pipeline for an automated bottle pick-and-place,
@@ -303,7 +343,7 @@ ROS 2 topics map straight into Orion-LD as NGSI-LD entities with no bridge node.
 > NGSI-v2 demonstrator components — **voice, gesture, AI detector, dashboard, QuantumLeap/Crate/
 > Grafana analytics** — do **not** run against the DDS broker; they need the `node` backend + a
 > standard Orion stack (or an NGSI-LD migration). The DDS path also requires a **Vulcanexus** ROS
-> side (a plain ROS 2 Jazzy publisher doesn't propagate the DDS type schema). Verified 2026-06-28.
+> side (a plain ROS 2 Jazzy publisher doesn't propagate the DDS type schema).
 
 | | `bridge_backend:=node` (NGSI-v2 alternative) | `bridge_backend:=dds` (default) |
 |---|---|---|
@@ -373,6 +413,13 @@ The table below documents the alignment and justifies the gaps:
 
 ## Installation
 
+> **You do not have to install these by hand.** The Setup Assistant's **First-time Install**
+> installs everything listed below for you — system packages (via `install_prerequisites.sh`),
+> every module's Python dependencies (`venv` + `torch_venv`), and the built ROS 2 workspace. Run
+> `python3 setup_dds.py` for the DDS-native runtime (or `python3 setup.py` for the NGSI-v2 stack)
+> and choose **First-time Install**. The manual steps below (Option B) are only needed if you want
+> to install piece by piece.
+
 ### Prerequisites
 
 | Dependency | Version | Required for | Notes |
@@ -387,14 +434,14 @@ The table below documents the alignment and justifies the gaps:
 | Node.js / npm | ≥ 18 | React dashboard only | Installed by `install_prerequisites.sh` |
 | MediaPipe | ≥ 0.10 | Gesture module only | `pip install -r gesture-commands-fiware/requirements.txt` |
 | Vosk | ≥ 0.3 | Voice module only | `pip install -r voice-commands-fiware/requirements.txt` |
-| xArm SDK | latest | Robot arm only | Closed-source vendor SDK; **not required for hello world** |
-| xArm-7 robot | hardware | Robot arm only | **Not required for hello world** |
-| USB camera | hardware | AI detector only | **Not required for hello world** |
-| Microphone | hardware | Voice module only | **Not required for hello world** |
+| xArm SDK | latest | Robot arm only | Closed-source vendor SDK; **not required in stub mode** |
+| xArm-7 robot | hardware | Robot arm only | **Not required in stub mode** |
+| USB camera | hardware | AI detector only | **Not required in stub mode** |
+| Microphone | hardware | Voice module only | **Not required in stub mode** |
 
 **Simulation / hardware-free path:** the `fiware_bridge` and the FIWARE analytics stack can be
-fully exercised without robot hardware, a camera, or a microphone. The hello world below uses
-this path.
+fully exercised without robot hardware, a camera, or a microphone. The Quick Start's
+[stub modes](#dds-native-runtime) use this path.
 
 ### Option A — Guided setup with the Setup Assistant (recommended)
 
@@ -415,7 +462,16 @@ python3 setup.py
 # Choose "First-time Install" on the first run, "Daily Startup" thereafter.
 ```
 
-The Setup Assistant calls `install_prerequisites.sh` under the hood for the system-level
+For the **DDS-native / NGSI-LD runtime**, use the DDS variant instead — its **First-time
+Install** does the same full install, and its **Daily Startup (DDS)** wires the DDS-broker-only
+path (and prompts for the gesture camera):
+
+```bash
+python3 setup_dds.py
+# "First-time Install" on the first run, "Daily Startup (DDS)" thereafter.
+```
+
+Either Setup Assistant calls `install_prerequisites.sh` under the hood for the system-level
 packages (Docker, Node.js, Vulcanexus Jazzy). You can also run that script on its own — see
 Option B.
 
@@ -430,7 +486,7 @@ chmod +x install_prerequisites.sh
 ```
 
 **2. Python virtual environment.** Create and activate a venv, then install the bridge
-dependencies (this is all that is needed for the `fiware_bridge` hello world):
+dependencies (this is all that is needed to run the `fiware_bridge` on its own):
 
 ```bash
 python3 -m venv venv
@@ -460,162 +516,7 @@ source install/setup.bash
 
 ---
 
-## Hello World (No Robot Required)
-
-This hello world verifies the AI Packaging Module's integration backbone — the `fiware_bridge`
-node and the FIWARE monitoring stack — by exchanging data with a local FIWARE Orion instance in
-both directions, **without any robot hardware, camera, or microphone**. It exercises the same data
-path that carries human commands and robot/skill state during a real packaging run.
-
-**Step 1 — Start FIWARE**
-
-```bash
-cd fiware-analytics-docker
-docker compose up -d
-# Wait ~10 s for Orion to become ready
-curl -s http://localhost:1026/version | python3 -m json.tool
-```
-
-Expected: JSON response showing Orion version `3.10.1`.
-
-**Step 2 — Build and launch the bridge**
-
-```bash
-cd ros2-xarm-pack-bottle/ros2_ws
-source install/setup.bash
-# This hello world uses the standard Orion stack from Step 1, so use the NGSI-v2
-# node backend. (The default backend is dds; its hello world — Orion-LD DDS
-# broker + Vulcanexus — is in fiware_bridge/dds/README.md.)
-ros2 launch fiware_bridge fiware_bridge.launch.py bridge_backend:=node
-```
-
-Expected log output:
-
-```
-[configurable_fiware_bridge]: Configurable FIWARE Bridge started!
-[configurable_fiware_bridge]: FIWARE: localhost:1026
-[configurable_fiware_bridge]: Service: openiot
-[configurable_fiware_bridge]: ROS2 → FIWARE mappings:
-[configurable_fiware_bridge]:   /system_skill_pick_and_place/status → SystemSkillPickAndPlace.status
-```
-
-**Step 3 — Publish a mock ROS 2 message**
-
-In a second terminal:
-
-```bash
-source ros2-xarm-pack-bottle/ros2_ws/install/setup.bash
-ros2 topic pub /system_skill_pick_and_place/status std_msgs/msg/String \
-  "data: 'IDLE'" --once
-```
-
-**Step 4 — Verify in FIWARE**
-
-```bash
-curl -s \
-  -H "Fiware-Service: openiot" \
-  -H "Fiware-ServicePath: /" \
-  http://localhost:1026/v2/entities/SystemSkillPickAndPlace \
-  | python3 -m json.tool
-```
-
-Expected: a JSON entity with `"status": {"type": "Text", "value": "IDLE", ...}`.
-
-**Step 5 — Verify FIWARE → ROS 2 direction**
-
-Simulate an IoT button press by POSTing directly to Orion:
-
-```bash
-# Create the entity if it doesn't exist yet
-curl -s -o /dev/null -w "%{http_code}" -X POST \
-  http://localhost:1026/v2/entities \
-  -H "Content-Type: application/json" \
-  -H "Fiware-Service: openiot" \
-  -H "Fiware-ServicePath: /" \
-  -d '{"id":"M5Stick:001","type":"Device","buttonBlue":{"type":"Text","value":"ON"}}'
-
-# Then watch the ROS 2 topic in another terminal:
-ros2 topic echo /start_button
-```
-
-Expected: `data: true` published within 1 second (one polling interval).
-
-### Optional Next Step — Bring up the AI perception service
-
-The steps above verify the integration + monitoring backbone with **no extra hardware**. To also
-exercise the AI perception half of the module, you can start the AI Bottle Detector service. The
-**service itself starts without a robot**, registers its FIWARE entity, and exposes its REST API —
-so you can verify it is wired in. Running an actual *detection*, however, requires a GPU
-PyTorch environment, a camera (or RTSP stream), and trained model weights (`*.pth`, not shipped in
-the repo — see [Known Limitations](#known-limitations)).
-
-**1. Get the model weights.** Pre-trained weights live on Hugging Face
-([`hpcbg/harmony-bottle-detector`](https://huggingface.co/hpcbg/harmony-bottle-detector), ~159 MB).
-The setup assistant offers to download them automatically; to fetch manually:
-
-```bash
-mkdir -p ai-bottle-detector-fiware/models
-curl -L -o ai-bottle-detector-fiware/models/best_model.pth \
-  https://huggingface.co/hpcbg/harmony-bottle-detector/resolve/main/best_model.pth
-```
-
-**2. Configure.** Copy the template and set your camera ID/URL and model path:
-
-```bash
-cd ai-bottle-detector-fiware
-cp config/config.json.tpl config/config.json
-# edit config/config.json: CAMERA (device id or RTSP URL), MODEL_PATH, APP_API_HOST
-```
-
-**2. Start the service** (FIWARE from Step 1 must be running). The setup assistant's `torch_venv`
-is the recommended environment, since PyTorch must match your CPU/CUDA:
-
-```bash
-source ../torch_venv/bin/activate     # created by setup.py; or your own torch env
-pip install -r requirements.txt        # FastAPI, OpenCV, etc. (torch installed separately)
-./run.sh                               # uvicorn main:app --host 0.0.0.0 --port 22001
-```
-
-**3. Verify the service is up and registered in FIWARE:**
-
-```bash
-# REST API health check
-curl -s http://localhost:22001/health | python3 -m json.tool
-# Interactive API docs (open in a browser):  http://localhost:22001/docs
-
-# The detector auto-creates its job entity in FIWARE on startup:
-curl -s \
-  -H "Fiware-Service: openiot" -H "Fiware-ServicePath: /" \
-  http://localhost:1026/v2/entities/BottleDetectionJob:processor-01 \
-  | python3 -m json.tool
-```
-
-Expected: `/health` returns a JSON object (`"camera": false` is normal with no camera attached),
-and the `BottleDetectionJob:processor-01` entity exists in Orion with `status: "IDLE"`.
-
-**4. (Full path — needs camera + weights) Trigger a detection** through FIWARE, exactly as the
-ROS 2 task does. Set the detector's `command` attribute to `START`; the service runs a job and
-writes the bottle count and pick pose back to the same entity:
-
-```bash
-curl -s -X PATCH \
-  http://localhost:1026/v2/entities/BottleDetectionJob:processor-01/attrs \
-  -H "Content-Type: application/json" \
-  -H "Fiware-Service: openiot" -H "Fiware-ServicePath: /" \
-  -d '{"command":{"type":"Text","value":"START"}}'
-
-# Then re-read the entity — status progresses CREATED → CAPTURING → PROCESSING → DONE
-```
-
-This closes the loop: a FIWARE command drives the AI perception, and the result flows back through
-the same monitored data layer that the bridge uses — the two halves of the AI Packaging Module
-working together.
-
----
-
 ## Basic Demo — Full System
-
-This section describes the complete demonstrator startup for reference.
 
 **Scenario:** human operator presses a button or says "GO PICK" → robot detects a bottle, picks
 it up, fills it, caps it, and hands it over. The entire operation state is logged in FIWARE and
@@ -624,34 +525,19 @@ visible on the Grafana and React dashboards.
 **Prerequisites:** complete hardware setup (xArm-7, camera, microphone, M5Stack button),
 configuration files created as described in the per-module READMEs.
 
-```bash
-# 1. FIWARE stack
-cd fiware-analytics-docker && docker compose start
+The [Quick Start](#quick-start) brings up the DDS-native runtime. `./launch_pack_bottle_dds.sh`
+starts the Orion-LD DDS broker, the `ros2` voice/gesture/AI backends, and the `dds` bridge backend
+(the React dashboard is omitted — it reads NGSI-v2, which the `-mongocOnly` DDS broker does not
+serve). It requires a Vulcanexus ROS side, and the DDS broker binds host port 1026 (run only one
+Orion at a time). The NGSI-v2 stack (standard Orion + QuantumLeap + CrateDB + Grafana + React
+dashboard) starts with `./launch_pack_bottle.sh` instead.
 
-# 2. AI Bottle Detector
-cd ai-bottle-detector-fiware && . ./run.sh
+**Operator input:** press the blue button on the M5Stack, or say "GO PICK".
 
-# 3. ROS 2 nodes (includes fiware_bridge)
-cd ros2-xarm-pack-bottle && . ./run.sh
+**Expected output:** robot executes the pick-fill-cap-handover sequence; all stages appear in the
+Grafana analytics dashboard at `http://localhost:4000` (default credentials: admin / admin).
 
-# 4. Gesture recognition
-cd gesture-commands-fiware && . ./run.sh
-
-# 5. Voice recognition
-cd voice-commands-fiware && . ./run.sh
-
-# 6. React Dashboard (optional)
-cd react-dashboard && . ./run.sh
-```
-
-Alternatively, use the top-level launch script: `./launch_pack_bottle.sh`
-
-**DDS-native runtime.** To bring the same demo up on the **DDS-broker-only / NGSI-LD** path
-instead — the Orion-LD DDS broker, the `ros2` voice/gesture/AI backends, and the `dds` bridge
-backend, with the React dashboard omitted (NGSI-v2 only) — use the DDS counterparts:
-`./launch_pack_bottle_dds.sh` (one-shot launcher) or `python3 setup_dds.py` (guided Setup
-Assistant, DDS variant). Both require a Vulcanexus ROS side, and the DDS broker binds the same
-host port 1026 as the standard Orion stack (run only one at a time).
+### DDS-native runtime
 
 By default both perception modules run in **real camera mode**: AI bottle detection uses its
 camera + weights, and gesture recognition uses the camera device stored in
@@ -691,10 +577,8 @@ GESTURE_MODE=stub \
 ./launch_pack_bottle_dds.sh
 ```
 
-**Operator input:** press the blue button on the M5Stack, or say "GO PICK".
-
-**Expected output:** robot executes the pick-fill-cap-handover sequence; all stages appear in the
-Grafana analytics dashboard at `http://localhost:4000` (default credentials: admin / admin).
+The stub modes keep the ROS 2 topics and the DDS → Orion-LD mappings fully active; they only skip
+opening the camera devices, so the whole path runs on a machine with no cameras attached.
 
 ### Video Demonstration
 
@@ -935,7 +819,7 @@ harmony/
 - The xArm-7 robot requires the UFactory xArm Python SDK (open source, MIT) but communicates
   with proprietary firmware on the robot controller.
 - The Edubot educational cobot uses a vendor-specific interface library.
-- Neither robot SDK is required to run the `fiware_bridge` hello world.
+- Neither robot SDK is required to run the `fiware_bridge` or the stub-mode demo.
 
 **Untested configurations:**
 - Multi-robot or multi-operator scenarios (single operator, single arm only tested).
