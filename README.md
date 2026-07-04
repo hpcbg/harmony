@@ -2,20 +2,6 @@
 
 > **ARISE D4 Shareable Module** | MIT License | ROS 2 Jazzy / Vulcanexus | FIWARE Orion v3
 
-> ⚙️ **DDS enabler.** The DDS enabler backend covers **all scalar `std_msgs` types**
-> (String/Bool/Int32/…), not just `String`, and the reserved-`status`-leaf topic is handled via a
-> `status_json` rename — see
-> [`fiware_bridge/docs/dds_full_integration_plan.md`](./ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/docs/dds_full_integration_plan.md).
->
-> ✅ **Everything except the React dashboard is validated end-to-end on the DDS backend.**
-> The bridge, the voice / gesture / IoT-button command inputs, the AI bottle detector (status, bottle
-> count, pick pose, full result, and the real Faster-R-CNN perception path), and the
-> `task_pack_bottle` behaviour tree all round-trip over **ROS 2 → DDS → Orion-LD (NGSI-LD)**, verified
-> under Vulcanexus by [`./run_dds_regression_tests.sh`](#dds-native-validation). Only the **React
-> dashboard** requires the custom-node / NGSI-v2 backend (it reads NGSI-v2, which the
-> `-mongocOnly` DDS broker does not serve), so the full dashboard demonstrator runs over
-> the custom node.
-
 **End user:** [CMYK Ingredients](https://www.cmykingredients.com/) &nbsp;·&nbsp;
 **Technology provider:** [High Performance Creators (HPCBG)](https://hpc.bg/)
 
@@ -393,6 +379,20 @@ ros2 launch fiware_bridge fiware_bridge.launch.py            # bridge_backend de
 # NGSI-v2 custom node (alternative; for the standard Orion stack + integrated demo)
 ros2 launch fiware_bridge fiware_bridge.launch.py bridge_backend:=node
 ```
+
+> ⚙️ **DDS enabler.** The DDS enabler backend covers **all scalar `std_msgs` types**
+> (String/Bool/Int32/…), not just `String`, and the reserved-`status`-leaf topic is handled via a
+> `status_json` rename — see
+> [`fiware_bridge/docs/dds_full_integration_plan.md`](./ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/docs/dds_full_integration_plan.md).
+>
+> ✅ **Everything except the React dashboard is validated end-to-end on the DDS backend.**
+> The bridge, the voice / gesture / IoT-button command inputs, the AI bottle detector (status, bottle
+> count, pick pose, full result, and the real Faster-R-CNN perception path), and the
+> `task_pack_bottle` behaviour tree all round-trip over **ROS 2 → DDS → Orion-LD (NGSI-LD)**, verified
+> under Vulcanexus by [`./run_dds_regression_tests.sh`](#dds-native-validation). Only the **React
+> dashboard** requires the custom-node / NGSI-v2 backend (it reads NGSI-v2, which the
+> `-mongocOnly` DDS broker does not serve), so the full dashboard demonstrator runs over
+> the custom node.
 
 ### ROS4HRI Alignment
 
