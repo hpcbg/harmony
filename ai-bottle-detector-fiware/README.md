@@ -1,5 +1,11 @@
 # Bottle Detection
 
+> **A reusable module of the [HARMONY demonstrator](../README.md).** HARMONY combines seven
+> independently reusable ARISE modules; this is one of them. **Standalone**, it is a self-contained
+> Fast R-CNN + FastAPI detection service with its own REST API — retrain the weights and it detects a
+> different object. **In the HARMONY demonstrator**, it detects bottles and returns the pick pose that
+> drives the robot. See the [top-level README](../README.md) for how the modules fit together.
+
 This repository contains the complete algorithm for bottle detection.
 
 The used AI model for bottle detection is Fast R-CNN provided by PyTorch. The camera which is used is M5Stack Timer Camera X with RTSP streaming firmware. Any other camera can also be used.

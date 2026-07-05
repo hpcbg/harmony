@@ -1,5 +1,11 @@
 # Voice Commands to FIWARE
 
+> **A reusable module of the [HARMONY demonstrator](../README.md).** HARMONY combines seven
+> independently reusable ARISE modules; this is one of them. **Standalone**, it is a Vosk
+> keyword→command service — redefine the keyword set for a different application. **In the HARMONY
+> demonstrator**, it sends recognised spoken commands to the robot. See the
+> [top-level README](../README.md) for how the modules fit together.
+
 This repository contains a Python script which will listen to a list of predefined voice commands (keywords) and when a keyword is recognized it will be send to the FIWARE.
 
 For the speech recognition the Vosk models are used. The default set of keywords is GO, STOP, PICK, CAP, GIVE, SAFE and FAST.

@@ -1,5 +1,11 @@
 # Fiware Server and Data Analytics
 
+> **A reusable module of the [HARMONY demonstrator](../README.md).** HARMONY combines seven
+> independently reusable ARISE modules; this is one of them. **Standalone**, it is a generic FIWARE
+> data + history + dashboard stack (Orion + QuantumLeap + CrateDB + Grafana) that any FIWARE
+> application can adopt. **In the HARMONY demonstrator**, it records and visualises every packaging
+> cycle. See the [top-level README](../README.md) for how the modules fit together.
+
 This repository contains docker compose file for providing FIWARE server, saving historical data to database and tools for further analysis of the stored data.
 
 The server allows all CORS origins.

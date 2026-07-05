@@ -1,5 +1,12 @@
 # ROS 2 and FIWARE integration for Bottle Pack operation
 
+> **A reusable module of the [HARMONY demonstrator](../README.md).** HARMONY combines seven
+> independently reusable ARISE modules; this is one of them. **Standalone**, the `fiware_bridge` is a
+> fully generic, YAML-configured ROS 2 ↔ FIWARE bridge (no robot-specific code) and the behaviour-tree
+> task pattern retargets to another arm or task. **In the HARMONY demonstrator**, it coordinates the
+> pick → fill → cap → handover sequence and carries every command and state change between ROS 2 and
+> FIWARE. See the [top-level README](../README.md) for how the modules fit together.
+
 This repository contains ROS 2 packages which allows integration of ROS 2 and FIWARE for execution of bottle detection and bottle pack or bottle pick and place operation with the xArm7 robot.
 
 ## Instalation

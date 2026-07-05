@@ -1,13 +1,20 @@
-# HARMONY — AI Packaging Module
+# HARMONY — HRI Packaging Demonstrator
 
-> **ARISE D4 Shareable Module** | MIT License | ROS 2 Jazzy / Vulcanexus | FIWARE Orion v3
+> **ARISE demonstrator built from 7 reusable modules** | MIT License | ROS 2 Jazzy / Vulcanexus | FIWARE Orion v3
+
+The **HRI Packaging Demonstrator** (HARMONY) is a demonstrator for AI-assisted, human-directed
+robotic packaging. It is not a single
+program but a **composition of seven independently reusable modules** — each lives in its own folder
+with its own README and can be adopted on its own — wired together here into one runnable
+pack-bottle demonstrator. This README documents the demonstrator and how the modules combine; each
+module's own README documents its standalone use.
 
 **End user:** [CMYK Ingredients](https://www.cmykingredients.com/) &nbsp;·&nbsp;
 **Technology provider:** [High Performance Creators (HPCBG)](https://hpc.bg/)
 
 [![Industrial setup demonstration](./images/industrial-setup-demo.png)](./images/industrial-setup-demo.png)
 
-## Why this module
+## Why this demonstrator
 
 Together with our end user **[CMYK Ingredients](https://www.cmykingredients.com/)**, we are
 addressing a critical challenge in industrial automation, with a focus on the sustainable
@@ -31,22 +38,23 @@ direct and supervise the robot in plain, natural ways, and a plant manager needs
 the cell is doing — throughput, state, and failures — without bolting on a separate monitoring
 project afterwards.
 
-The **AI Packaging Module** answers both needs in one deployable unit. It packages an
-**AI-driven robotic packaging capability** — a robot that detects an object with computer vision
-and runs a configurable pick → fill → cap → handover sequence, directed by a human through an IoT
-button, voice, or hand gestures — together with a **ready-to-run monitoring & analytics stack**
-(FIWARE Context Broker + time-series history + Grafana dashboards). Every command and state
-change flows through a single, declarative data layer, so the same events that drive the robot
-are automatically recorded, queryable over a REST API, and visualised live.
+The **HARMONY demonstrator** answers both needs in one runnable system by **combining seven
+reusable modules**: an **AI-driven robotic packaging capability** — a robot that detects an object
+with computer vision and runs a configurable pick → fill → cap → handover sequence, directed by a
+human through an IoT button, voice, or hand gestures — together with a **ready-to-run monitoring &
+analytics stack** (FIWARE Context Broker + time-series history + Grafana dashboards). Every command
+and state change flows through a single, declarative data layer, so the same events that drive the
+robot are automatically recorded, queryable over a REST API, and visualised live.
 
-Originally the deliverable was scoped as two separate modules — an *AI Packaging* capability and
-a standalone *Monitoring & Analytics* module. We **combined them** because in practice they are
-only useful together: the packaging capability produces the data, and the analytics layer gives
-that data meaning. Shipping them as one module means a single setup, a single hardware-free
-demonstration, and a single coherent data model for a reviewer or an adopter to follow.
+Each module is a **shareable asset in its own right** — the ROS 2 ↔ FIWARE bridge, the AI detector,
+the FIWARE analytics stack, the gesture, voice and IoT command inputs, and the React dashboard can
+each be picked up and reused independently (see each module's own README). The demonstrator's value
+is showing them **working together**: the packaging capability produces the data, and the analytics
+layer gives that data meaning. Bundling them behind one setup gives a reviewer or an adopter a
+single install, a single hardware-free demonstration, and a single coherent data model to follow.
 
-The result is reusable beyond bottles: swap the vision model and the YAML mapping, and the same
-module drives and monitors a different AI-assisted packaging or pick-and-place task.
+The composition is reusable beyond bottles: swap the vision model and the YAML mapping, and the same
+modules drive and monitor a different AI-assisted packaging or pick-and-place task.
 
 ---
 
@@ -63,21 +71,25 @@ under ARISE, developed by HPCBG. The HARMONY demonstrator (D3) showed the end-to
 task with a physical xArm-7 robot and a suite of HRI modalities (gesture, voice, IoT button, AI
 vision), all integrated through the ARISE middleware stack.
 
-This D4 deliverable extracts and packages the **AI Packaging Module** — the AI packaging
-capability together with its monitoring & analytics — as installable, documented, runnable
-software. The configurable **ROS 2 ↔ FIWARE bridge** (`fiware_bridge`) is the integration
-backbone that ties the two halves together: it moves robot/skill state and human commands
-between ROS 2 topics and FIWARE NGSI-v2 entities through a single YAML-configurable node, with no
-robot-specific code, which is what makes the combined module portable to a new task.
+This deliverable packages that demonstrator as installable, documented, runnable software — and,
+just as importantly, as **seven modules that are each reusable on their own**. The configurable
+**ROS 2 ↔ FIWARE bridge** (`fiware_bridge`) is the integration backbone that ties them together: it
+moves robot/skill state and human commands between ROS 2 topics and FIWARE entities through a single
+YAML-configurable mapping, with no robot-specific code, which is what makes the composition portable
+to a new task.
 
-**Module composition**
+**The seven reusable modules combined into the demonstrator** (detailed in
+[System Overview](#system-overview)):
 
-| Part of the AI Packaging Module | Lives in | Reusability |
-|---|---|---|
-| Integration backbone (ROS 2 ↔ FIWARE bridge) | `ros2-xarm-pack-bottle/ros2_ws/src/fiware_bridge/` | Fully generic — swap the YAML for a new task |
-| AI perception (object detection) | `ai-bottle-detector-fiware/` | Reusable pattern (Fast R-CNN + FastAPI); retrain weights per object |
-| Monitoring & analytics | `fiware-analytics-docker/` (Orion + CrateDB + QuantumLeap + Grafana) | Generic stack; dashboard panels are task-specific |
-| Human-command inputs | `gesture-commands-fiware/`, `voice-commands-fiware/`, `iot-device-firmware/` | Reusable; gesture/keyword sets are task-specific |
+| # | Reusable module | Lives in | Standalone reuse | Role in the HARMONY demonstrator |
+|---|---|---|---|---|
+| 1 | ROS 2 system (task orchestration + `fiware_bridge` backbone) | `ros2-xarm-pack-bottle/` | Behaviour-tree task pattern + a fully generic ROS 2 ↔ FIWARE bridge (swap the YAML) | Coordinates the pick → fill → cap → handover sequence and carries every command/state change between ROS 2 and FIWARE |
+| 2 | AI object detector | `ai-bottle-detector-fiware/` | Reusable Fast R-CNN + FastAPI service; retrain weights per object | Detects bottles and returns the pick pose |
+| 3 | FIWARE monitoring & analytics | `fiware-analytics-docker/` (Orion + CrateDB + QuantumLeap + Grafana) | Generic FIWARE data + history + dashboard stack | Records and visualises every cycle |
+| 4 | Hand-gesture recognition | `gesture-commands-fiware/` | Reusable MediaPipe gesture→command service; retrain the gesture set | Sends gesture commands to the robot |
+| 5 | Voice-command recognition | `voice-commands-fiware/` | Reusable Vosk keyword→command service; redefine the keyword set | Sends spoken commands to the robot |
+| 6 | React dashboard | `react-dashboard/` | Reusable widget-based FIWARE dashboard app | Live web view of system state |
+| 7 | IoT device firmware | `iot-device-firmware/` | Reusable M5Stack → FIWARE button firmware | Physical start/stop operator buttons |
 
 ---
 
@@ -138,9 +150,9 @@ ARISE objective of reusable, interoperable HRI components. Observed gains in the
 include reduced cycle time, lower operator workload, and improved process transparency through
 live monitoring.
 
-The high-level architecture of the AI Packaging Module is shown below:
+The high-level architecture of the HARMONY demonstrator is shown below:
 
-[![AI Packaging Module Architecture](./images/ai_packaging_architecture.png)](./images/ai_packaging_architecture.png)
+[![HARMONY Demonstrator Architecture](./images/ai_packaging_architecture.png)](./images/ai_packaging_architecture.png)
 
 The flow diagram of the system skill Pick is shown below:
 [![System skill Pick](./images/pick-skill-flow.png)](./images/pick-skill-flow.png)
@@ -149,7 +161,9 @@ The full demonstrator system architecture (all 7 subsystems) is shown here:
 
 [![System Architecture](./images/system_architecture.jpg)](./images/system_architecture.jpg)
 
-The system is divided into the following components.
+The system combines the following **seven shareable modules** into the HARMONY demonstrator. Each is
+a reusable asset in its own right — usable standalone as described in its own folder README — and
+plays the role noted below when combined here.
 
 ### 1. ROS 2 System
 
@@ -163,8 +177,11 @@ Tree shown in the following figure:
 
 [![Pack Bottle Behaviour Tree](./images/pack_bottle_behaviour_tree.png)](./images/pack_bottle_behaviour_tree.png)
 
-The developed ROS 2 nodes and more details can be found in
-[ros2-xarm-pack-bottle](./ros2-xarm-pack-bottle/).
+> **As a reusable module:** the `fiware_bridge` is a fully generic, YAML-configured ROS 2 ↔ FIWARE
+> bridge with no robot-specific code, and the behaviour-tree task pattern retargets to another arm or
+> task. **In this demonstrator:** it coordinates the pick → fill → cap → handover sequence and moves
+> every command and state change between ROS 2 and FIWARE. See
+> [ros2-xarm-pack-bottle](./ros2-xarm-pack-bottle/).
 
 ### 2. AI Bottle Detector System
 
@@ -184,7 +201,10 @@ separate `bottle` and `cap` classes to infer pose), producing the pick pose used
 
 [![AI Bottle Detection](./images/ai_bottle_detection.png)](./images/ai_bottle_detection.png)
 
-More details can be found in [ai-bottle-detector-fiware](./ai-bottle-detector-fiware/).
+> **As a reusable module:** a standalone Fast R-CNN + FastAPI detection service with its own REST
+> API — retrain the weights and it detects a different object. **In this demonstrator:** it detects
+> bottles and returns the pick pose that drives the robot. See
+> [ai-bottle-detector-fiware](./ai-bottle-detector-fiware/).
 
 ### 3. FIWARE Platform for Communication and Data Analytics
 
@@ -202,7 +222,9 @@ directly from the recorded history — for example, the detection and pick durat
 
 [![Detection and Pick Duration](./images/detection-and-pick-duration.png)](./images/detection-and-pick-duration.png)
 
-More details can be found in [fiware-analytics-docker](./fiware-analytics-docker/).
+> **As a reusable module:** a generic FIWARE data + history + dashboard stack (Orion + QuantumLeap +
+> CrateDB + Grafana) that any FIWARE application can adopt. **In this demonstrator:** it records and
+> visualises every packaging cycle. See [fiware-analytics-docker](./fiware-analytics-docker/).
 
 ### 4. Hand Gesture Recognition
 
@@ -221,7 +243,9 @@ hand) and can be seen as a hand-gesture *extension* of the ROS4HRI perception su
 |---|---|
 | [![Gesture — Cap intent](./images/gesture_cap_intent.png)](./images/gesture_cap_intent.png) | [![Gesture — Give intent](./images/gesture_give_intent.png)](./images/gesture_give_intent.png) |
 
-More details can be found in [gesture-commands-fiware](./gesture-commands-fiware/).
+> **As a reusable module:** a standalone MediaPipe gesture→command service — redefine the gesture
+> set for a different application. **In this demonstrator:** it sends gesture commands to the robot.
+> See [gesture-commands-fiware](./gesture-commands-fiware/).
 
 ### 5. Voice Commands Recognition
 
@@ -232,7 +256,9 @@ keyword spotting → FIWARE command) is illustrated below:
 
 [![Voice Command Recognition Pipeline](./images/voice_command_pipeline.png)](./images/voice_command_pipeline.png)
 
-More details can be found in [voice-commands-fiware](./voice-commands-fiware/).
+> **As a reusable module:** a standalone Vosk keyword→command service — redefine the keyword set for
+> a different application. **In this demonstrator:** it sends spoken commands to the robot. See
+> [voice-commands-fiware](./voice-commands-fiware/).
 
 ### 6. React Dashboard Web Application
 
@@ -241,12 +267,17 @@ state.
 
 [![Dashboard Screenshot](./images/react_dashboard_screenshot.png)](./images/react_dashboard_screenshot.png)
 
-More details can be found in [react-dashboard](./react-dashboard/).
+> **As a reusable module:** a customisable, widget-based React dashboard for any FIWARE deployment.
+> **In this demonstrator:** it is the live web view of system state. See
+> [react-dashboard](./react-dashboard/).
 
 ### 7. IoT Devices
 
-M5Stack IoT devices are used to send operator commands via HTTP requests to FIWARE. Sample
-Arduino firmware is in [iot-device-firmware](./iot-device-firmware/).
+M5Stack IoT devices are used to send operator commands via HTTP requests to FIWARE.
+
+> **As a reusable module:** standalone M5Stack → FIWARE button firmware for any FIWARE input device.
+> **In this demonstrator:** it provides the physical start/stop operator buttons. Sample Arduino
+> firmware is in [iot-device-firmware](./iot-device-firmware/).
 
 ---
 
@@ -396,7 +427,7 @@ ros2 launch fiware_bridge fiware_bridge.launch.py bridge_backend:=node
 
 ### ROS4HRI Alignment
 
-The AI Packaging Module operates at the **command/intent layer** — it consumes post-processed
+The HARMONY demonstrator operates at the **command/intent layer** — it consumes post-processed
 intent signals (gesture class string, voice keyword string, button press boolean) rather than raw
 human-perception streams. The ROS4HRI standard (`hri_msgs`) defines perception-level topics
 (`/humans/persons/*`, `/humans/voices/*`, `/humans/bodies/*`) which are upstream of this layer.
@@ -728,7 +759,7 @@ perception and grasp planning:
 
 ```
 harmony/
-├── README.md                          # This file — D4 module entry point
+├── README.md                          # This file — module entry point
 ├── LICENSE                            # MIT
 ├── requirements.txt                   # Python deps for the fiware_bridge module
 ├── setup.py                           # Setup Assistant (install wizard + daily launcher)
@@ -882,7 +913,7 @@ pulling in any AGPL dependency.
 
 ## Repository Information
 
-This repository is the D4 deliverable extracted from the HARMONY demonstrator (`hpcbg/harmony-dev`).
+This repository is the deliverable extracted from the HARMONY demonstrator (`hpcbg/harmony-dev`).
 The demonstrator history and provenance are preserved in `harmony-dev`. This repository contains
 only the stable, reviewed module intended for ARISE evaluation.
 

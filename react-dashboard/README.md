@@ -1,5 +1,11 @@
 # Robotik4 Dashboard
 
+> **A reusable module of the [HARMONY demonstrator](../README.md).** HARMONY combines seven
+> independently reusable ARISE modules; this is one of them. **Standalone**, it is a customisable,
+> widget-based dashboard app for any service exposing an HTTP/FIWARE API. **In the HARMONY
+> demonstrator**, it is the live web view of system state. See the [top-level README](../README.md)
+> for how the modules fit together.
+
 This repository contains Dashboard app for robotic applications.
 
 The app is currently deployed at https://robotic-dashboard.web.app

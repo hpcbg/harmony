@@ -1,5 +1,11 @@
 # Gesture Commands to FIWARE
 
+> **A reusable module of the [HARMONY demonstrator](../README.md).** HARMONY combines seven
+> independently reusable ARISE modules; this is one of them. **Standalone**, it is a MediaPipe
+> gesture→command service — redefine the gesture set for a different application. **In the HARMONY
+> demonstrator**, it sends recognised hand-gesture commands to the robot. See the
+> [top-level README](../README.md) for how the modules fit together.
+
 This repository contains a Python script which will recognize hand gestures commands and when a command is recognized it will be send to the FIWARE.
 
 For the recognition the MediaPipe hand landmark model is used.
