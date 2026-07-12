@@ -763,7 +763,7 @@ two DDS hops is a minimal **test relay** (a single NGSI-LD PATCH performed by th
 script), reported separately as *test relay / PATCH overhead*, not as perception or robot logic.
 
 ```bash
-# recommended: inside the Vulcanexus image (reliable DDS type propagation)
+# recommended: The command bellow runs the script inside the Vulcanexus container (reliable DDS type propagation)
 ./run_vulcanexus_dds_validation.sh measure_dds_fiware_latency.sh
 
 # or directly on a host with a ROS 2 / Vulcanexus environment sourced
