@@ -743,6 +743,63 @@ ros2 topic pub --once /user_inputs/start_button std_msgs/msg/Bool "{data: true}"
 # one "unavailable" warning is logged, and the node keeps ticking (no crash).
 ```
 
+### DDS/FIWARE control-loop latency
+
+The DDS-native path can also be **timed**, not just functionally validated. The main reported value
+is the **ROS → FIWARE → ROS communication-loop latency**: how long a control signal takes to travel
+out of ROS 2, through the Orion-LD/FIWARE DDS enabler, and back into ROS 2 —
+
+```
+ROS 2 publisher (/user_inputs/gesture_command)
+  → Orion-LD DDS enabler → NGSI-LD GestureDetector:operator-1 (command.value.data)
+  → minimal test relay: PATCH BottleDetectionJob:processor-01 (command.value.data)
+  → Orion-LD DDS enabler → ROS 2 (/bottle_detection/command)
+  → ROS 2 subscriber
+```
+
+This is **communication latency only**. It excludes camera processing, AI inference, gesture
+recognition, robot motion, dashboard rendering, and all business logic — the only step between the
+two DDS hops is a minimal **test relay** (a single NGSI-LD PATCH performed by the measurement
+script), reported separately as *test relay / PATCH overhead*, not as perception or robot logic.
+
+```bash
+# recommended: inside the Vulcanexus image (reliable DDS type propagation)
+./run_vulcanexus_dds_validation.sh measure_dds_fiware_latency.sh
+
+# or directly on a host with a ROS 2 / Vulcanexus environment sourced
+./measure_dds_fiware_latency.sh
+```
+
+It needs **no camera, no AI real mode, no gesture real mode, and no robot hardware**, and it refuses
+to run against a NGSI-v2-only Orion. Each sample uses a unique payload (`PERF_LOOP_<ns>_<i>`) to
+avoid stale reads. Defaults are `WARMUP=3`, `SAMPLES=20`, `TIMEOUT_SEC=5`, `POLL_INTERVAL_MS=5`,
+overridable with `DDS_LATENCY_WARMUP`, `DDS_LATENCY_SAMPLES`, `DDS_LATENCY_TIMEOUT_SEC`, and
+`DDS_LATENCY_POLL_INTERVAL_MS`. It prints the **loop** min/median/mean/p95/max plus a breakdown
+(ROS → FIWARE, relay/PATCH overhead, FIWARE → ROS) and writes
+`/tmp/harmony-dds-latency-<timestamp>.json` and `.csv`.
+
+> The `ROS → FIWARE` figure is observed by polling Orion-LD (so it includes the poll granularity),
+> and the relay PATCH overlaps the `FIWARE → ROS` notification — Orion-LD pushes to DDS while still
+> processing the PATCH — so `FIWARE → ROS` is timed from PATCH initiation (never negative) and the
+> HTTP PATCH cost is reported separately as the test-relay overhead. When run through the Vulcanexus
+> Docker wrapper the files land in the **container's** `/tmp` (ephemeral); set `DDS_LATENCY_OUTDIR`
+> to a repo-relative path to keep them.
+
+A typical run on the reference stack: loop median ≈ 9 ms (ROS → FIWARE ≈ 7.5 ms, relay ≈ 1.8 ms,
+FIWARE → ROS ≈ 1.7 ms).
+
+The same measurement can be attached to the existing validation scripts with `MEASURE_DDS_LATENCY=1`
+(off by default, so normal validation and regression runs are unchanged):
+
+```bash
+MEASURE_DDS_LATENCY=1 ./run_dds_regression_tests.sh      # adds an optional latency stage
+MEASURE_DDS_LATENCY=1 ./validate_dds_native_demo.sh      # runs after the demo validation passes
+MEASURE_DDS_LATENCY=1 ./validate_dds_command_flow.sh     # loop latency, excluding AI detection time
+```
+
+Latency values are reported, **not** used as a pass/fail threshold — these runs only fail on a
+communication timeout or a broken DDS mapping.
+
 ### Reuse for cylindrical objects — pick fixtures
 
 The module is **task-agnostic**: swap the vision model and the YAML topic/entity mapping and it

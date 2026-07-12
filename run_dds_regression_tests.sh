@@ -291,6 +291,38 @@ PY
                           || record "5. dummy action-server success path" "FAIL"
 fi
 
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 6. DDS/FIWARE control-loop latency  (optional: MEASURE_DDS_LATENCY=1)        ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+# Off by default to keep the regression fast. It measures the ROS → FIWARE → ROS
+# communication loop only; it does NOT fail on latency values — only on a broken
+# mapping / communication timeout (the latency script's own non-zero exit).
+if [ "${MEASURE_DDS_LATENCY:-0}" = "1" ]; then
+    head "6. DDS/FIWARE control-loop latency (MEASURE_DDS_LATENCY=1)"
+    SEC_FAIL=0
+    LOG6="$LOGDIR/06_loop_latency.log"
+    if ! command -v docker >/dev/null 2>&1; then
+        warn "docker not available — skipping the latency measurement"
+        record "6. DDS/FIWARE control-loop latency" "SKIP (no docker)"
+    else
+        info "running ./run_vulcanexus_dds_validation.sh measure_dds_fiware_latency.sh …"
+        ( cd "$REPO" && ./run_vulcanexus_dds_validation.sh measure_dds_fiware_latency.sh ) \
+            >"$LOG6" 2>&1
+        rc=$?
+        info "exit code: $rc   (log: $LOG6)"
+        # ASCII markers only (avoid the multibyte → arrow); the summary header and
+        # the breakdown label are printed only once loop samples were collected.
+        assert_grep "loop samples collected"      "$LOG6" 'control-loop communication latency'
+        assert_grep "breakdown printed"           "$LOG6" 'FIWARE relay/PATCH overhead'
+        assert_grep "result files written"        "$LOG6" 'harmony-dds-latency-.*\.json'
+        # Communication health only — never a latency threshold.
+        assert_not_grep "no communication timeouts" "$LOG6" 'No successful loop samples'
+        if [ "$rc" -ne 0 ]; then bad "latency runner exited non-zero (broken mapping / timeout)"; fi
+        [ "$SEC_FAIL" -eq 0 ] && record "6. DDS/FIWARE control-loop latency" "PASS" \
+                              || record "6. DDS/FIWARE control-loop latency" "FAIL"
+    fi
+fi
+
 # ── summary ──────────────────────────────────────────────────────────────────
 head "Summary"
 FAILED=0

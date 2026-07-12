@@ -245,4 +245,13 @@ else
     [ "$VULCANEXUS" -eq 0 ] && info "→ try Vulcanexus: ./run_vulcanexus_dds_validation.sh validate_dds_command_flow.sh"
 fi
 
+# ── optional: control-loop latency measurement (MEASURE_DDS_LATENCY=1) ────────
+# The command-flow test above is unchanged. This measures the pure ROS → FIWARE →
+# ROS communication loop and intentionally excludes AI detection time.
+if [ "${MEASURE_DDS_LATENCY:-0}" = "1" ] && [ "$FAILURES" -eq 0 ]; then
+    head "DDS/FIWARE control-loop latency (MEASURE_DDS_LATENCY=1)"
+    info "running ./measure_dds_fiware_latency.sh (excludes AI detection time) …"
+    "$SCRIPT_DIR/measure_dds_fiware_latency.sh" || warn "latency measurement reported an issue (non-fatal)"
+fi
+
 exit "$FAILURES"

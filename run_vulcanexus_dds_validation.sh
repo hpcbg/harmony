@@ -28,6 +28,7 @@ ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-0}"
 # Which validation to run inside the container. Defaults to the DDS-native demo
 # validation; pass another top-level script, e.g.:
 #     ./run_vulcanexus_dds_validation.sh validate_dds_command_flow.sh
+#     ./run_vulcanexus_dds_validation.sh measure_dds_fiware_latency.sh
 TARGET="${1:-validate_dds_native_demo.sh}"
 if [ ! -f "$REPO/$TARGET" ]; then
     echo "[host] ERROR: validation script '$TARGET' not found in $REPO" >&2
@@ -76,6 +77,12 @@ exec docker run --rm -i $TTY_FLAG \
     -e "ROS_DOMAIN_ID=$ROS_DOMAIN_ID" \
     -e "ORION=$ORION" \
     -e "TARGET=$TARGET" \
+    -e MEASURE_DDS_LATENCY \
+    -e DDS_LATENCY_WARMUP \
+    -e DDS_LATENCY_SAMPLES \
+    -e DDS_LATENCY_TIMEOUT_SEC \
+    -e DDS_LATENCY_POLL_INTERVAL_MS \
+    -e DDS_LATENCY_OUTDIR \
     -v "$REPO:$REPO" \
     -w "$REPO" \
     "$IMAGE" \

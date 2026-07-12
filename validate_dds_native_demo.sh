@@ -302,4 +302,12 @@ if [ "$VULCANEXUS" -eq 0 ]; then
     info "documented Vulcanexus type-propagation requirement, not a component failure."
 fi
 
+# ── optional: control-loop latency measurement (MEASURE_DDS_LATENCY=1) ────────
+# Default behaviour is unchanged; only runs after the validation above passes.
+if [ "${MEASURE_DDS_LATENCY:-0}" = "1" ] && [ "$TOPIC_FAILURES" -eq 0 ]; then
+    head "5. DDS/FIWARE control-loop latency (MEASURE_DDS_LATENCY=1)"
+    info "running ./measure_dds_fiware_latency.sh …"
+    "$SCRIPT_DIR/measure_dds_fiware_latency.sh" || warn "latency measurement reported an issue (non-fatal)"
+fi
+
 exit "$TOPIC_FAILURES"
